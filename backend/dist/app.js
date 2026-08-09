@@ -1,0 +1,20 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.app = void 0;
+const cors_1 = __importDefault(require("cors"));
+const express_1 = __importDefault(require("express"));
+const health_js_1 = require("./controllers/health.js");
+const error_handler_js_1 = require("./middleware/error-handler.js");
+const index_js_1 = require("./routes/index.js");
+const api_response_js_1 = require("./utils/api-response.js");
+exports.app = (0, express_1.default)();
+exports.app.disable('x-powered-by');
+exports.app.use((0, cors_1.default)());
+exports.app.use(express_1.default.json({ limit: '1mb' }));
+exports.app.get('/api/v1/health', health_js_1.healthController);
+exports.app.use('/api/v1', index_js_1.apiRouter);
+exports.app.use((_req, res) => (0, api_response_js_1.sendError)(res, 'NOT_FOUND', 'Route not found', 404));
+exports.app.use(error_handler_js_1.errorHandler);
