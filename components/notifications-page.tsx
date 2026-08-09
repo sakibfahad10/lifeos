@@ -1,0 +1,13 @@
+'use client'
+
+import { Bell, Check, Clock3, CircleAlert, Sparkles } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+
+const notifications = [
+  { title: 'Your AI import is ready for review', message: '2 schedule items are waiting for your confirmation.', time: '2 minutes ago', type: 'AI_IMPORT', unread: true, icon: Sparkles },
+  { title: 'Dentist appointment starts tomorrow', message: 'Reminder set for 9:00 AM tomorrow.', time: '1 hour ago', type: 'REMINDER', unread: true, icon: Clock3 },
+  { title: 'Overdue: Review Q3 product roadmap', message: 'This task was due today at 4:00 PM.', time: 'Yesterday', type: 'OVERDUE', unread: true, icon: CircleAlert },
+  { title: 'You completed your focus goal', message: 'You reached 3 hours and 20 minutes of focus time.', time: 'Yesterday', type: 'SYSTEM', unread: false, icon: Check },
+]
+
+export function NotificationsPage() { return <div className="flex flex-col gap-6"><div><p className="text-sm text-muted-foreground">Stay informed, not overwhelmed</p><h1 className="mt-1 text-2xl font-semibold tracking-tight">Notifications</h1><p className="mt-2 text-sm text-muted-foreground">Reminders, overdue items, and workflow updates in one place.</p></div><div className="rounded-xl border border-border bg-card"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5"><div><h2 className="font-semibold">Inbox</h2><p className="mt-1 text-xs text-muted-foreground">3 unread notifications</p></div><Button variant="outline" size="sm">Mark all as read</Button></div>{notifications.map(notification => { const Icon = notification.icon; return <div key={notification.title} className={`flex items-start gap-4 border-b border-border/70 p-5 last:border-0 ${notification.unread ? 'bg-primary/[0.025]' : ''}`}><div className="mt-1 flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary"><Icon className="size-4" /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-medium">{notification.title}</p><span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{notification.type}</span></div><p className="mt-1 text-xs text-muted-foreground">{notification.message}</p><p className="mt-2 text-[11px] text-muted-foreground">{notification.time}</p></div>{notification.unread && <span className="mt-2 size-2 rounded-full bg-primary" />}</div>})}</div></div> }
