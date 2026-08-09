@@ -1,0 +1,8 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+enum CalendarItemType { EVENT TASK ROUTINE REMINDER }
+model User { id String @id @default(cuid()) email String @unique createdAt DateTime @default(now()) updatedAt DateTime @updatedAt calendarItems CalendarItem[] notifications Notification[] }
+model CalendarItem { id String @id @default(cuid()) title String description String? startsAt DateTime endsAt DateTime? type CalendarItemType createdAt DateTime @default(now()) updatedAt DateTime @updatedAt userId String user User @relation(fields: [userId], references: [id]) }
+model Notification { id String @id @default(cuid()) title String body String? readAt DateTime? createdAt DateTime @default(now()) userId String user User @relation(fields: [userId], references: [id]) }
+model AiImportDraft { id String @id @default(cuid()) sourceName String status String @default("draft") createdAt DateTime @default(now()) updatedAt DateTime @updatedAt }
