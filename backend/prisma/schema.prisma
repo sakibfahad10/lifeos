@@ -55,6 +55,7 @@ model User {
   name            String
   email           String           @unique
   passwordHash    String
+  settings        Json             @default("{}")
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   calendarItems   CalendarItem[]
@@ -206,5 +207,5 @@ model AuditLog {
   @@index([createdAt])
 }
 
-// Create a migration with: pnpm --dir backend db:migrate
+// Add settings JSON with: pnpm --dir backend db:migrate
 // Then generate the client with: pnpm --dir backend db:generate
