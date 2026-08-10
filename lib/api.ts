@@ -2,6 +2,8 @@ export type ApiEnvelope<T> = { data: T; error: null } | { data: null; error: { c
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'
 
+export async function apiFetch<T>(path: string, init?: RequestInit): Promise<{ data: T }> { return { data: await request<T>(path, init) } }
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${baseUrl}${path}`, { credentials: 'include', ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) } })
   const body = await response.json() as ApiEnvelope<T>
