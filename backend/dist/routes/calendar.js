@@ -2,8 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.calendarRouter = void 0;
 const express_1 = require("express");
+const auth_js_1 = require("../middleware/auth.js");
 const calendar_js_1 = require("../controllers/calendar.js");
 exports.calendarRouter = (0, express_1.Router)();
+exports.calendarRouter.use(auth_js_1.requireAuth);
 exports.calendarRouter.get('/', calendar_js_1.listCalendarItems);
 exports.calendarRouter.post('/', calendar_js_1.createCalendarItem);
 exports.calendarRouter.patch('/:id', calendar_js_1.updateCalendarItem);
