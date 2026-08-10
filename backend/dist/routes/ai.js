@@ -2,10 +2,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.aiRouter = void 0;
 const express_1 = require("express");
+const auth_js_1 = require("../middleware/auth.js");
 const zod_1 = require("zod");
 const prisma_js_1 = require("../config/prisma.js");
 const api_response_js_1 = require("../utils/api-response.js");
 const router = (0, express_1.Router)();
+router.use(auth_js_1.requireAuth);
 const itemSchema = zod_1.z.object({ title: zod_1.z.string().min(1), startAt: zod_1.z.string().datetime().optional(), endAt: zod_1.z.string().datetime().optional(), category: zod_1.z.string().optional(), priority: zod_1.z.enum(['LOW', 'MEDIUM', 'HIGH']).default('MEDIUM'), selected: zod_1.z.boolean().default(true), confidenceScore: zod_1.z.number().min(0).max(1).optional() });
 const userId = (req) => (req.header('x-user-id') || process.env.DEV_USER_ID || '').trim();
 const fallbackItems = (text) => [{ title: text.trim().split('\n')[0]?.slice(0, 120) || 'Imported schedule item', startAt: new Date().toISOString(), category: 'Imported', priority: 'MEDIUM', selected: true, confidenceScore: 0.7 }];

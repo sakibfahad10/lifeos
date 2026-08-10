@@ -1,2 +1,5 @@
-import { AuthPage } from '@/components/lifeos-app'
-export default function LoginPage() { return <AuthPage /> }
+import { AuthForm } from '@/components/auth-form'
+import { CalendarDays } from 'lucide-react'
+import Link from 'next/link'
+
+export default function LoginPage() { return <main className="flex min-h-screen items-center justify-center bg-muted/30 p-4"><div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-sm"><Link href="/dashboard" className="flex items-center gap-2.5 text-lg font-semibold"><span className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground"><CalendarDays className="size-4" /></span>LifeOS</Link><div className="mt-10"><h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1><p className="mt-2 text-sm text-muted-foreground">Sign in to continue to your workspace.</p></div><AuthForm /><p className="mt-6 text-center text-sm text-muted-foreground">New to LifeOS? <Link className="font-medium text-primary hover:underline" href="/register">Create an account</Link></p></div></main> }

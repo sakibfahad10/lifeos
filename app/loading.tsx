@@ -1,0 +1,1 @@
+export default function Loading() { return <main className="flex min-h-screen items-center justify-center bg-background p-6"><div className="flex flex-col items-center gap-3 text-center"><div className="size-8 animate-pulse rounded-xl bg-primary/20" /><p className="text-sm text-muted-foreground">Loading your workspace…</p></div></main> }

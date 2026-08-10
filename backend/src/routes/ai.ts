@@ -1,9 +1,11 @@
 import { Router } from 'express'
+import { requireAuth } from '../middleware/auth.js'
 import { z } from 'zod'
 import { prisma } from '../config/prisma.js'
 import { sendData, sendError } from '../utils/api-response.js'
 
 const router = Router()
+router.use(requireAuth)
 const itemSchema = z.object({ title: z.string().min(1), startAt: z.string().datetime().optional(), endAt: z.string().datetime().optional(), category: z.string().optional(), priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).default('MEDIUM'), selected: z.boolean().default(true), confidenceScore: z.number().min(0).max(1).optional() })
 const userId = (req: any) => (req.header('x-user-id') || process.env.DEV_USER_ID || '').trim()
 const fallbackItems = (text: string) => [{ title: text.trim().split('\n')[0]?.slice(0, 120) || 'Imported schedule item', startAt: new Date().toISOString(), category: 'Imported', priority: 'MEDIUM' as const, selected: true, confidenceScore: 0.7 }]

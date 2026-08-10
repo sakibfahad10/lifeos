@@ -7,6 +7,7 @@ import { updateTaskStatus } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { AIImportPage } from '@/components/ai-import-page'
 import { NotificationsPage as NotificationsFeaturePage } from '@/components/notifications-page'
+import { AuthForm } from '@/components/auth-form'
 
 const nav = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },

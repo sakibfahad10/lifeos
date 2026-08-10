@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.app = void 0;
 const cors_1 = __importDefault(require("cors"));
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const express_1 = __importDefault(require("express"));
 const health_js_1 = require("./controllers/health.js");
 const error_handler_js_1 = require("./middleware/error-handler.js");
@@ -12,7 +13,8 @@ const index_js_1 = require("./routes/index.js");
 const api_response_js_1 = require("./utils/api-response.js");
 exports.app = (0, express_1.default)();
 exports.app.disable('x-powered-by');
-exports.app.use((0, cors_1.default)());
+exports.app.use((0, cors_1.default)({ origin: process.env.FRONTEND_URL?.split(',').map(value => value.trim()) || true, credentials: true }));
+exports.app.use((0, cookie_parser_1.default)());
 exports.app.use(express_1.default.json({ limit: '1mb' }));
 exports.app.get('/api/v1/health', health_js_1.healthController);
 exports.app.use('/api/v1', index_js_1.apiRouter);

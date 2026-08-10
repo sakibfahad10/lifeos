@@ -2,9 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.notificationsRouter = void 0;
 const express_1 = require("express");
+const auth_js_1 = require("../middleware/auth.js");
 const prisma_js_1 = require("../config/prisma.js");
 const api_response_js_1 = require("../utils/api-response.js");
 const router = (0, express_1.Router)();
+router.use(auth_js_1.requireAuth);
 const userId = (req) => (req.header('x-user-id') || process.env.DEV_USER_ID || '').trim();
 router.get('/', async (req, res, next) => { try {
     const id = userId(req);
