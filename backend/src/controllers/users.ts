@@ -19,8 +19,10 @@ const settingsSchema = z.object({
 function userId(req: AuthenticatedRequest) { return req.userId ?? '' }
 
 export async function me(req: AuthenticatedRequest, res: Response) {
-  const user = await prisma.user.findUnique({ where: { id: userId(req) }, select: { id: true, name: true, email: true, settings: true } })
-  if (!user) return sendError(res, 'USER_NOT_FOUND', 'User was not found', 404)
+  const id = userId(req)
+  const email = String(req.headers['x-user-email'] ?? '')
+  const name = String(req.headers['x-user-name'] ?? email.split('@')[0] ?? 'LifeOS user')
+  const user = await prisma.user.upsert({ where: { id }, update: { email, name }, create: { id, email, name, passwordHash: null }, select: { id: true, name: true, email: true, settings: true } })
   return sendData(res, user)
 }
 

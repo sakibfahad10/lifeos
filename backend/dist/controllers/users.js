@@ -19,9 +19,10 @@ const settingsSchema = zod_1.z.object({
 }).partial();
 function userId(req) { return req.userId ?? ''; }
 async function me(req, res) {
-    const user = await prisma_js_1.prisma.user.findUnique({ where: { id: userId(req) }, select: { id: true, name: true, email: true, settings: true } });
-    if (!user)
-        return (0, api_response_js_1.sendError)(res, 'USER_NOT_FOUND', 'User was not found', 404);
+    const id = userId(req);
+    const email = String(req.headers['x-user-email'] ?? '');
+    const name = String(req.headers['x-user-name'] ?? email.split('@')[0] ?? 'LifeOS user');
+    const user = await prisma_js_1.prisma.user.upsert({ where: { id }, update: { email, name }, create: { id, email, name, passwordHash: null }, select: { id: true, name: true, email: true, settings: true } });
     return (0, api_response_js_1.sendData)(res, user);
 }
 async function updateProfile(req, res) {

@@ -21,6 +21,10 @@ function requireAuth(req, res, next) {
             return (0, api_response_js_1.sendError)(res, 'AUTH_INVALID', 'Invalid authentication token', 401);
         req.userId = payload.sub;
         req.headers['x-user-id'] = payload.sub;
+        if (payload.email)
+            req.headers['x-user-email'] = payload.email;
+        if (payload.user_metadata?.name)
+            req.headers['x-user-name'] = payload.user_metadata.name;
         next();
     }
     catch {
