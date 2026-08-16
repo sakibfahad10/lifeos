@@ -6,7 +6,7 @@ import { sendData, sendError } from '../utils/api-response.js'
 const defaultUserId = process.env.DEV_USER_ID
 
 function userId(req: Request) {
-  return (req.header('x-user-id') || defaultUserId || '').trim()
+  return ((req as any).userId || req.header('x-user-id') || defaultUserId || '').trim()
 }
 
 function routeId(req: Request) {

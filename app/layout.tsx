@@ -6,5 +6,12 @@ export const metadata: Metadata = { title: 'LifeOS — Make time for what matter
 export const viewport: Viewport = { colorScheme: 'light dark', themeColor: [{ media: '(prefers-color-scheme: light)', color: '#f7f9fc' }, { media: '(prefers-color-scheme: dark)', color: '#20283a' }] }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body className="antialiased">{children}{process.env.NODE_ENV === 'production' && <Analytics />}</body></html>
+  return (
+    <html lang="en">
+      <body className="antialiased">
+        {children}
+        {process.env.VERCEL === '1' && <Analytics />}
+      </body>
+    </html>
+  )
 }

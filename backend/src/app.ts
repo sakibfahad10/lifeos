@@ -9,7 +9,8 @@ import { sendError } from './utils/api-response.js'
 export const app = express()
 
 app.disable('x-powered-by')
-app.use(cors({ origin: process.env.FRONTEND_URL?.split(',').map(value => value.trim()) || true, credentials: true }))
+const allowedOrigins = (process.env.CORS_ORIGIN || process.env.FRONTEND_URL)?.split(',').map(value => value.trim()) || true
+app.use(cors({ origin: allowedOrigins, credentials: true }))
 app.use(cookieParser())
 app.use(express.json({ limit: '1mb' }))
 
