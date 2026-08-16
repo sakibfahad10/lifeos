@@ -4,7 +4,7 @@ import { prisma } from '../config/prisma.js'
 import { sendData, sendError } from '../utils/api-response.js'
 
 const defaultUserId = process.env.DEV_USER_ID
-function getUserId(req: Request) { return (req.header('x-user-id') || defaultUserId || '').trim() }
+function getUserId(req: Request) { return ((req as any).userId || req.header('x-user-id') || defaultUserId || '').trim() }
 
 export async function listTasks(req: Request, res: Response, next: NextFunction) {
   try {

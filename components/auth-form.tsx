@@ -16,13 +16,25 @@ export function AuthForm({ register = false }: { register?: boolean }) {
     setError('')
     const data = Object.fromEntries(new FormData(event.currentTarget).entries())
     try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      if (!supabaseUrl || supabaseUrl.includes('placeholder') || !supabaseKey || supabaseKey.includes('placeholder')) {
+        setError('Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env file.')
+        setPending(false)
+        return
+      }
+
       const supabase = createClient()
       const result = register
         ? await supabase.auth.signUp({ email: String(data.email), password: String(data.password), options: { data: { name: String(data.name) }, emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/auth/callback` } })
         : await supabase.auth.signInWithPassword({ email: String(data.email), password: String(data.password) })
       if (result.error) {
-        const message = result.error.message.toLowerCase()
-        setError(message.includes('confirm') ? 'Check your email to confirm your account.' : register && message.includes('password') ? result.error.message : 'Invalid email or password.')
+        const message = result.error.message
+        if (message.toLowerCase().includes('confirm')) {
+          setError('Check your email to confirm your account.')
+        } else {
+          setError(message)
+        }
         return
       }
       if (register && !result.data.session) {
@@ -32,9 +44,9 @@ export function AuthForm({ register = false }: { register?: boolean }) {
       await getCurrentUser()
       router.replace('/dashboard')
       router.refresh()
-    } catch (error) {
+    } catch (error: any) {
       console.error('[v0] Supabase auth request failed', error)
-      setError('Unable to reach authentication. Check the Supabase configuration and try again.')
+      setError(error?.message || 'Unable to reach authentication. Check the Supabase configuration and try again.')
     } finally {
       setPending(false)
     }
