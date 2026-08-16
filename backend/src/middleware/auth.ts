@@ -11,10 +11,12 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
   if (!secret) return sendError(res, 'AUTH_CONFIG_MISSING', 'Supabase authentication is not configured', 500)
   if (!token) return sendError(res, 'AUTH_REQUIRED', 'A signed-in user is required', 401)
   try {
-    const payload = jwt.verify(token, secret, { algorithms: ['HS256'] }) as { sub?: string; role?: string }
+    const payload = jwt.verify(token, secret, { algorithms: ['HS256'] }) as { sub?: string; role?: string; email?: string; user_metadata?: { name?: string } }
     if (!payload.sub || payload.role === 'anon') return sendError(res, 'AUTH_INVALID', 'Invalid authentication token', 401)
     req.userId = payload.sub
     req.headers['x-user-id'] = payload.sub
+    if (payload.email) req.headers['x-user-email'] = payload.email
+    if (payload.user_metadata?.name) req.headers['x-user-name'] = payload.user_metadata.name
     next()
   } catch {
     return sendError(res, 'AUTH_INVALID', 'Invalid or expired authentication token', 401)

@@ -3,6 +3,7 @@
 import { FormEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { getCurrentUser } from '@/lib/user-api'
 import { Button } from '@/components/ui/button'
 
 export function AuthForm({ register = false }: { register?: boolean }) {
@@ -28,7 +29,8 @@ export function AuthForm({ register = false }: { register?: boolean }) {
         setError('Account created. Check your email to confirm your account.')
         return
       }
-      router.push('/dashboard')
+      await getCurrentUser()
+      router.replace('/dashboard')
       router.refresh()
     } catch (error) {
       console.error('[v0] Supabase auth request failed', error)
