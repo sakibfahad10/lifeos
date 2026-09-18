@@ -1,0 +1,17 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/ai-import/page": "/ai-import",
+  "/auth/callback/route": "/auth/callback",
+  "/calendar/page": "/calendar",
+  "/dashboard/page": "/dashboard",
+  "/forgot-password/page": "/forgot-password",
+  "/login/page": "/login",
+  "/notifications/page": "/notifications",
+  "/page": "/",
+  "/profile/page": "/profile",
+  "/register/page": "/register",
+  "/reset-password/page": "/reset-password",
+  "/settings/page": "/settings",
+  "/tasks/page": "/tasks"
+}

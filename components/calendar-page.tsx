@@ -15,16 +15,18 @@ import {
   type SmartProposal, type SmartSchedule,
 } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { useNow } from '@/lib/hooks/use-time'
+import { TimeRemaining } from '@/components/ui/time-remaining'
 
 // ─── Constants & Styles ────────────────────────────────────────────────────────
 
 const CATEGORY_COLORS: Record<string, string> = {
-  work: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-300/40',
-  study: 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-300/40',
-  health: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-300/40',
-  personal: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-300/40',
-  meeting: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-300/40',
-  finance: 'bg-green-500/15 text-green-700 dark:text-green-300 border-green-300/40',
+  work: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/25',
+  study: 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/25',
+  health: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25',
+  personal: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/25',
+  meeting: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/25',
+  finance: 'bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/25',
 }
 
 const CAT_DOT: Record<string, string> = {
@@ -32,8 +34,8 @@ const CAT_DOT: Record<string, string> = {
   study: 'bg-violet-500',
   health: 'bg-emerald-500',
   personal: 'bg-amber-500',
-  meeting: 'bg-sky-500',
-  finance: 'bg-green-500',
+  meeting: 'bg-indigo-500',
+  finance: 'bg-teal-500',
 }
 
 function categoryColor(cat?: string | null) {
@@ -73,23 +75,25 @@ function reminderLabel(min: number) {
 
 // ─── Status & Overdue Logic ───────────────────────────────────────────────────
 
-function isOverdue(item: CalendarItem): boolean {
+// FIX: Accept an optional `now` Date so these helpers can be called with a
+// real-time timestamp and stay accurate when called from a re-rendering component.
+function isOverdue(item: CalendarItem, now: Date = new Date()): boolean {
   if (item.status === 'COMPLETED' || item.status === 'CANCELLED') return false
   if (item.status === 'OVERDUE') return true
   // Only tasks past their end/due time are overdue
   if (item.type === 'TASK') {
     const deadline = item.endAt ? new Date(item.endAt) : new Date(item.startAt)
-    return deadline.getTime() < Date.now()
+    return deadline.getTime() < now.getTime()
   }
   return false
 }
 
-function isInProgress(item: CalendarItem): boolean {
+function isInProgress(item: CalendarItem, now: Date = new Date()): boolean {
   if (item.status === 'COMPLETED' || item.status === 'CANCELLED') return false
-  const now = Date.now()
-  const start = new Date(item.startAt).getTime()
-  const end = item.endAt ? new Date(item.endAt).getTime() : start + (item.estimatedMinutes || 60) * 60000
-  return now >= start && now <= end
+  const nowMs  = now.getTime()
+  const start  = new Date(item.startAt).getTime()
+  const end    = item.endAt ? new Date(item.endAt).getTime() : start + (item.estimatedMinutes || 60) * 60000
+  return nowMs >= start && nowMs <= end
 }
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -220,12 +224,12 @@ function CalendarGrid({ year, month, items, selectedDate, onDateClick }: {
 
   return (
     <div>
-      <div className="mb-2 grid grid-cols-7 text-center text-[11px] font-medium text-muted-foreground">
+      <div className="mb-2 grid grid-cols-7 text-center text-[11px] font-semibold text-muted-foreground">
         {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => <span key={d}>{d}</span>)}
       </div>
-      <div className="grid grid-cols-7 gap-y-0.5">
+      <div className="grid grid-cols-7 gap-1">
         {days.map((d, i) => {
-          if (!d) return <span key={`empty-${i}`} />
+          if (!d) return <span key={`empty-${i}`} className="h-8 w-full" />
           const isToday = isSameDay(d, today)
           const isSelected = isSameDay(d, selectedDate)
           const hasDot = hasItem(d)
@@ -235,14 +239,20 @@ function CalendarGrid({ year, month, items, selectedDate, onDateClick }: {
               type="button"
               onClick={() => onDateClick(d)}
               className={cn(
-                'relative flex h-8 w-full items-center justify-center rounded-lg text-xs font-medium transition-all hover:bg-primary/15',
-                isSelected && !isToday && 'bg-muted font-bold text-foreground ring-1 ring-border',
-                isToday && 'bg-primary text-primary-foreground font-bold hover:bg-primary/90'
+                'relative flex h-8 w-full items-center justify-center rounded-lg text-xs font-medium transition-all',
+                isToday
+                  ? 'bg-primary text-primary-foreground font-bold shadow-xs'
+                  : isSelected
+                  ? 'bg-primary/10 text-primary font-bold border border-primary/30'
+                  : 'text-foreground hover:bg-muted'
               )}
             >
-              {d.getDate()}
+              <span>{d.getDate()}</span>
               {hasDot && !isToday && (
-                <span className="absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-primary" />
+                <span className={cn(
+                  'absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full',
+                  isSelected ? 'bg-primary' : 'bg-primary/70'
+                )} />
               )}
             </button>
           )
@@ -549,8 +559,12 @@ function ItemPanel({ item, onClose, onUpdated, onDeleted }: {
     })
   }
 
-  const overdue = isOverdue(localItem)
-  const inProgress = isInProgress(localItem)
+  // Real-time clock — fixes stale isOverdue/isInProgress that would freeze
+  // after initial render. The shared singleton timer updates every 30 seconds.
+  const now = useNow()
+
+  const overdue = isOverdue(localItem, now)
+  const inProgress = isInProgress(localItem, now)
 
   const save = async () => {
     if (!form.title.trim()) { setError('Title is required.'); return }
@@ -795,6 +809,14 @@ function ItemPanel({ item, onClose, onUpdated, onDeleted }: {
                   <span>Ends {fmtDate(new Date(localItem.endAt))} at {fmtTime(new Date(localItem.endAt))}</span>
                 </div>
               )}
+              {/* Time Remaining — shown in item detail panel */}
+              <TimeRemaining
+                dueAt={localItem.endAt ?? localItem.startAt}
+                status={localItem.status}
+                allDay={localItem.allDay}
+                variant="badge"
+                className="w-fit"
+              />
               {localItem.estimatedMinutes && (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Clock className="size-3.5 shrink-0" />
@@ -907,33 +929,95 @@ function NewItemForm({ defaultDate, onCreated, onCancel }: {
   }
 
   return (
-    <form onSubmit={save} className="flex flex-col gap-3 rounded-2xl border border-border/80 bg-card p-5 shadow-sm">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-base">New calendar item</h3>
-        <Button type="button" variant="ghost" size="icon-sm" onClick={onCancel}><X className="size-4" /></Button>
-      </div>
-      <input
-        value={form.title} onChange={e => patchForm({ title: e.target.value })} required autoFocus
-        placeholder="Title (e.g. Project presentation)" className="h-10 rounded-xl border border-input bg-background px-3 text-sm font-medium outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-      />
-      <div className="grid grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1 text-xs font-medium">
-          Type
-          <select value={form.type} onChange={e => patchForm({ type: e.target.value as any })} className="h-8 rounded-lg border border-input bg-background px-2 text-xs">
-            <option value="EVENT">Event</option><option value="TASK">Task</option><option value="REMINDER">Reminder</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs font-medium">
-          Priority
-          <select value={form.priority} onChange={e => patchForm({ priority: e.target.value as any })} className="h-8 rounded-lg border border-input bg-background px-2 text-xs">
-            <option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option>
-          </select>
-        </label>
+    <form onSubmit={save} className="lifeos-enter flex flex-col gap-4 rounded-2xl border border-primary/20 bg-card p-5 shadow-md">
+      <div className="flex items-center justify-between border-b border-border/60 pb-3">
+        <div className="flex items-center gap-2">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Plus className="size-4" />
+          </span>
+          <h3 className="font-semibold text-sm text-foreground">New Schedule Item</h3>
+        </div>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          <X className="size-4" />
+        </button>
       </div>
 
-      <label className="flex items-center gap-2 text-xs font-medium">
+      {/* Title Input */}
+      <div>
+        <label className="text-xs font-semibold text-foreground">
+          Title <span className="text-primary">*</span>
+        </label>
+        <input
+          value={form.title}
+          onChange={e => patchForm({ title: e.target.value })}
+          required
+          autoFocus
+          placeholder="e.g., Team Sync, Deep Work Block, Doctor Appointment"
+          className="mt-1 h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+        />
+      </div>
+
+      {/* Type & Priority Row */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        {/* Type pills */}
+        <div>
+          <label className="text-xs font-semibold text-foreground">Item Type</label>
+          <div className="mt-1 grid grid-cols-3 gap-1.5 rounded-lg border border-border/60 bg-muted/30 p-1">
+            {(['EVENT', 'TASK', 'REMINDER'] as const).map(t => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => patchForm({ type: t })}
+                className={cn(
+                  'flex items-center justify-center gap-1 rounded-md py-1.5 text-xs font-medium transition-all',
+                  form.type === t
+                    ? 'bg-card text-foreground font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {t === 'EVENT' ? <CalendarDays className="size-3" /> : t === 'TASK' ? <Check className="size-3" /> : <Clock className="size-3" />}
+                <span>{t.charAt(0) + t.slice(1).toLowerCase()}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Priority pills */}
+        <div>
+          <label className="text-xs font-semibold text-foreground">Priority</label>
+          <div className="mt-1 grid grid-cols-3 gap-1.5 rounded-lg border border-border/60 bg-muted/30 p-1">
+            {(['LOW', 'MEDIUM', 'HIGH'] as const).map(p => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => patchForm({ priority: p })}
+                className={cn(
+                  'flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-all',
+                  form.priority === p
+                    ? 'bg-card text-foreground font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <span className={cn(
+                  'size-1.5 rounded-full',
+                  p === 'HIGH' ? 'bg-rose-500' : p === 'MEDIUM' ? 'bg-amber-500' : 'bg-slate-400'
+                )} />
+                <span>{p.charAt(0) + p.slice(1).toLowerCase()}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* All day checkbox */}
+      <div className="flex items-center gap-2">
         <input
           type="checkbox"
+          id="calendar-all-day"
           checked={form.allDay}
           onChange={e => {
             const checked = e.target.checked
@@ -945,13 +1029,17 @@ function NewItemForm({ defaultDate, onCreated, onCancel }: {
               endAt: checked ? `${ymd}T23:59` : `${ymd}T10:00`,
             })
           }}
+          className="size-4 rounded border-input text-primary focus:ring-primary/20"
         />
-        All day event
-      </label>
+        <label htmlFor="calendar-all-day" className="cursor-pointer text-xs font-medium text-foreground">
+          All day event
+        </label>
+      </div>
 
+      {/* Date & Time fields */}
       {form.allDay ? (
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium">Date</label>
+        <div>
+          <label className="text-xs font-semibold text-foreground">Date</label>
           <input
             type="date"
             value={toLocalDateOnly(form.startAt)}
@@ -960,33 +1048,114 @@ function NewItemForm({ defaultDate, onCreated, onCancel }: {
               patchForm({ startAt: `${d}T00:00`, endAt: `${d}T23:59` })
             }}
             required
-            className="h-8 rounded-lg border border-input bg-background px-2 text-xs"
+            className="mt-1 h-9 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
           />
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2">
-          <label className="flex flex-col gap-1 text-xs font-medium">
-            Start
-            <input type="datetime-local" value={form.startAt} onChange={e => patchForm({ startAt: e.target.value })} required className="h-8 rounded-lg border border-input bg-background px-2 text-xs" />
-          </label>
-          <label className="flex flex-col gap-1 text-xs font-medium">
-            End (optional)
-            <input type="datetime-local" value={form.endAt} onChange={e => patchForm({ endAt: e.target.value })} className="h-8 rounded-lg border border-input bg-background px-2 text-xs" />
-          </label>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-semibold text-foreground">Start Time</label>
+            <input
+              type="datetime-local"
+              value={form.startAt}
+              onChange={e => patchForm({ startAt: e.target.value })}
+              required
+              className="mt-1 h-9 w-full rounded-lg border border-input bg-background px-3 text-xs text-foreground outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-foreground">End Time (optional)</label>
+            <input
+              type="datetime-local"
+              value={form.endAt}
+              onChange={e => patchForm({ endAt: e.target.value })}
+              className="mt-1 h-9 w-full rounded-lg border border-input bg-background px-3 text-xs text-foreground outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+            />
+          </div>
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-2">
-        <input value={form.category} onChange={e => patchForm({ category: e.target.value })} placeholder="Category (e.g. work)" className="h-8 rounded-lg border border-input bg-background px-2 text-xs" />
-        <input value={form.location} onChange={e => patchForm({ location: e.target.value })} placeholder="Location (optional)" className="h-8 rounded-lg border border-input bg-background px-2 text-xs" />
-        <input type="number" min="1" max="1440" value={form.estimatedMinutes} onChange={e => patchForm({ estimatedMinutes: e.target.value })} placeholder="Duration (min)" className="h-8 rounded-lg border border-input bg-background px-2 text-xs" />
+      {/* Category, Location, Duration */}
+      <div className="grid grid-cols-3 gap-2.5">
+        <div>
+          <label className="text-[11px] font-semibold text-muted-foreground">Category</label>
+          <input
+            value={form.category}
+            onChange={e => patchForm({ category: e.target.value })}
+            placeholder="work, health, study..."
+            className="mt-1 h-9 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+          />
+        </div>
+        <div>
+          <label className="text-[11px] font-semibold text-muted-foreground">Location</label>
+          <input
+            value={form.location}
+            onChange={e => patchForm({ location: e.target.value })}
+            placeholder="Room A, Zoom, etc."
+            className="mt-1 h-9 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+          />
+        </div>
+        <div>
+          <label className="text-[11px] font-semibold text-muted-foreground">Duration (min)</label>
+          <input
+            type="number"
+            min="1"
+            max="1440"
+            value={form.estimatedMinutes}
+            onChange={e => patchForm({ estimatedMinutes: e.target.value })}
+            placeholder="60"
+            className="mt-1 h-9 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+          />
+        </div>
       </div>
-      <textarea value={form.description} onChange={e => patchForm({ description: e.target.value })} rows={2} placeholder="Description (optional)" className="rounded-xl border border-input bg-background px-3 py-2 text-xs" />
-      <textarea value={form.notes} onChange={e => patchForm({ notes: e.target.value })} rows={2} placeholder="Notes (optional)" className="rounded-xl border border-input bg-background px-3 py-2 text-xs" />
-      {error && <p className="text-xs text-destructive">{error}</p>}
-      <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={saving}>{saving ? <Loader2 className="size-3.5 animate-spin" /> : 'Create item'}</Button>
-        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>Cancel</Button>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <div>
+          <label className="text-[11px] font-semibold text-muted-foreground">Description</label>
+          <textarea
+            value={form.description}
+            onChange={e => patchForm({ description: e.target.value })}
+            rows={2}
+            placeholder="Brief overview of this item..."
+            className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-xs text-foreground outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20 resize-none"
+          />
+        </div>
+        <div>
+          <label className="text-[11px] font-semibold text-muted-foreground">Internal Notes</label>
+          <textarea
+            value={form.notes}
+            onChange={e => patchForm({ notes: e.target.value })}
+            rows={2}
+            placeholder="Preparation checklists, links, etc."
+            className="mt-1 w-full rounded-lg border border-input bg-background p-2.5 text-xs text-foreground outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20 resize-none"
+          />
+        </div>
+      </div>
+
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-2.5 text-xs text-destructive">
+          <AlertCircle className="size-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <div className="flex items-center justify-end gap-2.5 border-t border-border/60 pt-3">
+        <Button type="button" size="sm" variant="outline" onClick={onCancel} className="h-9 px-4 text-xs font-medium">
+          Cancel
+        </Button>
+        <Button type="submit" size="sm" disabled={saving} className="h-9 px-4 gap-1.5 text-xs font-semibold shadow-xs">
+          {saving ? (
+            <>
+              <Loader2 className="size-3.5 animate-spin" />
+              <span>Saving...</span>
+            </>
+          ) : (
+            <>
+              <Check className="size-3.5" />
+              <span>Create Item</span>
+            </>
+          )}
+        </Button>
       </div>
     </form>
   )
@@ -998,6 +1167,9 @@ export function CalendarPage() {
   const [items, setItems] = useState<CalendarItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // Real-time clock so isOverdue/isInProgress re-evaluate on each tick
+  const now = useNow()
 
   // Briefing
   const [briefing, setBriefing] = useState<CalendarBriefing | null>(null)
@@ -1241,36 +1413,46 @@ export function CalendarPage() {
   const nextMonth = () => { setCalMonth(m => { if (m === 11) { setCalYear(y => y + 1); return 0 } return m + 1 }) }
 
   return (
-    <div className="flex h-full flex-col gap-0 md:flex-row md:gap-0">
+    <div className="lifeos-enter flex h-full flex-col gap-6 md:flex-row md:gap-6">
       {/* ── Left sidebar ── */}
-      <aside className="w-full shrink-0 md:w-64 md:border-r md:border-border/70 md:pr-5">
+      <aside className="w-full shrink-0 flex flex-col gap-4 md:w-72 md:border-r md:border-border/60 md:pr-6">
         {/* Daily Briefing Card */}
         {briefing && (
-          <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/[0.04] p-3 text-xs shadow-sm">
-            <div className="flex items-center gap-1.5 font-semibold text-primary">
-              <Sparkles className="size-3.5" />
-              <span>Daily Briefing</span>
+          <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-primary/[0.03] p-4 text-xs shadow-xs">
+            <div className="flex items-center gap-2 font-semibold text-primary">
+              <span className="flex size-6 items-center justify-center rounded-lg bg-primary/10">
+                <Sparkles className="size-3.5" />
+              </span>
+              <span className="text-xs uppercase tracking-wider">Daily Briefing</span>
             </div>
-            <p className="mt-1 text-muted-foreground leading-relaxed">{briefing.summary}</p>
+            <p className="mt-2 text-foreground/80 leading-relaxed text-xs">{briefing.summary}</p>
             {briefing.conflictItemIds.length > 0 && (
-              <p className="mt-1.5 font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <div className="mt-2.5 flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
                 <AlertCircle className="size-3 shrink-0" />
-                {briefing.conflictItemIds.length} conflict{briefing.conflictItemIds.length > 1 ? 's' : ''} detected
-              </p>
+                <span>{briefing.conflictItemIds.length} conflict{briefing.conflictItemIds.length > 1 ? 's' : ''} detected</span>
+              </div>
             )}
           </div>
         )}
 
         {/* Mini calendar */}
-        <div className="rounded-2xl border border-border/80 bg-card/90 p-4 shadow-sm">
+        <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-xs">
           <div className="mb-3 flex items-center justify-between">
-            <button onClick={prevMonth} className="flex size-7 items-center justify-center rounded-lg hover:bg-muted" title="Previous month">
+            <button
+              onClick={prevMonth}
+              className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              title="Previous month"
+            >
               <ChevronLeft className="size-4" />
             </button>
-            <span className="text-sm font-semibold">
+            <span className="text-xs font-semibold text-foreground">
               {new Date(calYear, calMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </span>
-            <button onClick={nextMonth} className="flex size-7 items-center justify-center rounded-lg hover:bg-muted" title="Next month">
+            <button
+              onClick={nextMonth}
+              className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              title="Next month"
+            >
               <ChevronRight className="size-4" />
             </button>
           </div>
@@ -1278,15 +1460,18 @@ export function CalendarPage() {
         </div>
 
         {/* Stats */}
-        <div className="mt-4 flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           {[
-            { label: 'Upcoming', value: items.filter(i => i.status === 'PENDING' && new Date(i.startAt) >= new Date()).length, color: 'text-primary' },
-            { label: 'Overdue Tasks', value: items.filter(isOverdue).length, color: 'text-red-500' },
-            { label: 'Completed', value: items.filter(i => i.status === 'COMPLETED').length, color: 'text-emerald-600' },
+            { label: 'Upcoming', value: items.filter(i => i.status === 'PENDING' && new Date(i.startAt) >= now).length, color: 'text-primary', dot: 'bg-primary' },
+            { label: 'Overdue Tasks', value: items.filter(i => isOverdue(i, now)).length, color: 'text-amber-600 dark:text-amber-400', dot: 'bg-amber-500' },
+            { label: 'Completed', value: items.filter(i => i.status === 'COMPLETED').length, color: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' },
           ].map(s => (
-            <div key={s.label} className="flex items-center justify-between rounded-xl border border-border/60 bg-card/80 px-3 py-2 text-sm">
-              <span className="text-muted-foreground">{s.label}</span>
-              <span className={cn('font-semibold', s.color)}>{s.value}</span>
+            <div key={s.label} className="flex items-center justify-between rounded-xl border border-border/70 bg-card px-3.5 py-2.5 text-xs shadow-xs">
+              <div className="flex items-center gap-2">
+                <span className={cn('size-1.5 rounded-full', s.dot)} />
+                <span className="font-medium text-muted-foreground">{s.label}</span>
+              </div>
+              <span className={cn('font-bold text-sm', s.color)}>{s.value}</span>
             </div>
           ))}
         </div>
@@ -1296,97 +1481,151 @@ export function CalendarPage() {
           variant="outline"
           size="sm"
           onClick={() => setShowSmart(s => !s)}
-          className="mt-4 w-full justify-start gap-2 border-primary/30 text-primary hover:bg-primary/5"
+          className={cn(
+            'w-full justify-center gap-2 border text-xs font-semibold transition-all h-9',
+            showSmart
+              ? 'border-primary/50 bg-primary/10 text-primary shadow-xs'
+              : 'border-primary/30 text-primary hover:bg-primary/5'
+          )}
         >
-          <Sparkles className="size-4" />
-          {showSmart ? 'Hide Smart Planner' : 'Smart Planning'}
+          <Sparkles className="size-3.5" />
+          <span>{showSmart ? 'Close Smart Planner' : 'Smart AI Planner'}</span>
         </Button>
       </aside>
 
       {/* ── Main content ── */}
-      <div className="mt-4 min-w-0 flex-1 md:mt-0 md:pl-6">
+      <div className="min-w-0 flex-1 flex flex-col gap-4">
         {/* Header */}
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs text-muted-foreground">Your Schedule</p>
-            <h1 className="mt-0.5 text-xl font-semibold tracking-tight">Calendar</h1>
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <span>Workspace</span>
+              <span>/</span>
+              <span className="text-primary font-bold">Calendar</span>
+            </div>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Calendar & Schedule</h1>
+            <p className="mt-1 text-xs text-muted-foreground">Coordinate tasks, meetings, and commitments across timelines.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             {/* View switcher: agenda, day, week, month */}
-            <div className="flex rounded-lg border border-border/80 bg-muted/40 p-0.5">
+            <div className="flex rounded-xl border border-border/70 bg-muted/40 p-1">
               {(['agenda', 'day', 'week', 'month'] as const).map(v => (
                 <button
                   key={v}
                   onClick={() => setView(v)}
-                  className={cn('rounded-md px-3 py-1 text-xs font-medium capitalize transition-colors',
-                    view === v ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  className={cn(
+                    'rounded-lg px-3 py-1.5 text-xs font-semibold capitalize transition-all',
+                    view === v
+                      ? 'bg-card text-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
                   )}
-                >{v}</button>
+                >
+                  {v}
+                </button>
               ))}
             </div>
+
             <Button
               onClick={() => { setNewFormDate(currentDate); setShowNewForm(s => !s) }}
               size="sm"
+              className="h-9 gap-1.5 text-xs font-semibold shadow-xs"
             >
-              <Plus className="size-3.5" /> New item
+              <Plus className="size-3.5" />
+              <span>New Item</span>
             </Button>
           </div>
         </div>
 
         {/* Smart planning drawer/box */}
         {showSmart && (
-          <section className="mb-4 rounded-2xl border border-primary/20 bg-primary/[0.03] p-4 shadow-sm">
-            <div className="flex items-start gap-3">
+          <section className="lifeos-enter rounded-2xl border border-primary/25 bg-card/95 p-5 shadow-md backdrop-blur-xs flex flex-col gap-3">
+            <div className="flex items-start gap-3 border-b border-border/60 pb-3">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <Sparkles className="size-4" />
               </span>
               <div className="min-w-0 flex-1">
-                <h2 className="text-sm font-semibold">Natural language smart scheduling</h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">Type what you want to do; LifeOS checks availability and suggests the best slot.</p>
+                <h2 className="text-sm font-semibold text-foreground">Natural Language Smart Scheduling</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Type what you need to do in plain English. LifeOS checks your existing commitments and proposes an optimal time slot.
+                </p>
               </div>
             </div>
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+
+            <div className="flex flex-col gap-2.5 sm:flex-row">
               <input
                 value={smartText}
                 onChange={e => setSmartText(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void runSmartPlan() } }}
-                placeholder="Tomorrow at 3pm, review product specs for 1 hour"
-                className="h-9 min-w-0 flex-1 rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-ring"
+                placeholder="e.g., Tomorrow at 3pm, review Q3 product roadmap for 1 hour"
+                className="h-10 min-w-0 flex-1 rounded-lg border border-input bg-background px-3.5 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
               />
-              <Button variant="outline" size="sm" onClick={() => void runSmartPlan()} disabled={smartLoading}>
-                {smartLoading ? <Loader2 className="size-3.5 animate-spin" /> : 'Find slot'}
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => void runSmartPlan()}
+                disabled={smartLoading || !smartText.trim()}
+                className="h-10 px-5 gap-1.5 text-xs font-semibold shrink-0"
+              >
+                {smartLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+                <span>Find Best Slot</span>
               </Button>
             </div>
-            {smartMessage && <p className="mt-2 text-xs font-medium text-primary">{smartMessage}</p>}
+
+            {/* Quick Prompt Suggestions */}
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+              <span className="font-semibold text-foreground/80">Try:</span>
+              {[
+                'Deep work block tomorrow from 9am to 11am',
+                'Design sync on Thursday at 2pm for 45 min',
+                'Weekly team retro Friday 4pm',
+              ].map(prompt => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => setSmartText(prompt)}
+                  className="rounded-md border border-border/70 bg-muted/40 px-2 py-0.5 text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+
+            {smartMessage && (
+              <p className="rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">{smartMessage}</p>
+            )}
+
             {smartResult && (
-              <div className="mt-3 rounded-xl border border-border bg-background/90 p-4 text-xs">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={cn('size-2 rounded-full', smartResult.conflicts.length ? 'bg-destructive' : 'bg-emerald-500')} />
-                  <p className="font-semibold text-sm">
+              <div className="mt-2 rounded-xl border border-border bg-background p-4 text-xs shadow-xs">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={cn('size-2 rounded-full', smartResult.conflicts.length ? 'bg-rose-500' : 'bg-emerald-500')} />
+                  <p className="font-semibold text-sm text-foreground">
                     {smartResult.conflicts.length ? 'Scheduling conflict detected' : 'Slot available'}
                   </p>
                 </div>
+
                 {smartResult.conflicts.length > 0 && (
-                  <div className="rounded-lg bg-destructive/10 p-2.5 text-destructive mb-3">
-                    <p className="font-medium">Conflicts with:</p>
-                    <ul className="list-disc list-inside mt-0.5 space-y-0.5">
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-destructive mb-3">
+                    <p className="font-semibold">Conflicts with existing items:</p>
+                    <ul className="list-disc list-inside mt-1 space-y-0.5 text-xs">
                       {smartResult.conflicts.map(c => (
                         <li key={c.id}>
-                          <span className="font-medium">{c.title}</span> ({new Date(c.startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                          <span className="font-semibold">{c.title}</span> ({new Date(c.startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
                         </li>
                       ))}
                     </ul>
                   </div>
                 )}
+
                 {smartResult.alternatives.length > 0 && (
-                  <div className="mt-2 flex flex-col gap-2">
+                  <div className="flex flex-col gap-2">
                     <p className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
                       {smartResult.conflicts.length ? 'Suggested Alternative Slots' : 'Proposed Schedule'}
                     </p>
                     {smartResult.alternatives.map((slot, idx) => (
-                      <div key={idx} className="flex items-center justify-between rounded-xl border border-border/80 bg-card/60 px-3 py-2">
+                      <div key={idx} className="flex items-center justify-between rounded-xl border border-border/80 bg-card p-3 shadow-xs">
                         <div>
-                          <p className="font-medium text-foreground">{slot.title}</p>
+                          <p className="font-semibold text-foreground text-sm">{slot.title}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {new Date(slot.startAt).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             {' – '}
@@ -1399,7 +1638,7 @@ export function CalendarPage() {
                           variant="outline"
                           onClick={() => void bookAlternativeSlot(slot)}
                           disabled={smartLoading}
-                          className="h-8 text-xs border-primary/40 text-primary hover:bg-primary/10"
+                          className="h-8 text-xs font-semibold border-primary/40 text-primary hover:bg-primary/10"
                         >
                           Book slot
                         </Button>
@@ -1407,9 +1646,11 @@ export function CalendarPage() {
                     ))}
                   </div>
                 )}
+
                 {smartResult.alternatives.length > 0 && !smartResult.conflicts.length && (
-                  <Button size="sm" className="mt-3" onClick={() => void runSmartPlan(true)} disabled={smartLoading}>
-                    Add to calendar
+                  <Button size="sm" className="mt-3 h-9 px-4 gap-1.5 text-xs font-semibold" onClick={() => void runSmartPlan(true)} disabled={smartLoading}>
+                    <Plus className="size-3.5" />
+                    <span>Add to Calendar</span>
                   </Button>
                 )}
               </div>
@@ -1418,15 +1659,15 @@ export function CalendarPage() {
         )}
 
         {/* Search & filter bar */}
-        <div className="mb-4 flex flex-col gap-2">
-          <div className="flex gap-2">
+        <div className="flex flex-col gap-2.5 rounded-2xl border border-border/80 bg-card p-3.5 shadow-xs">
+          <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search schedule by title, location, notes…"
-                className="h-9 w-full rounded-xl border border-input bg-background pl-9 pr-9 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
+                className="h-9 w-full rounded-lg border border-input bg-background pl-9 pr-8 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
               />
               {search && (
                 <button
@@ -1440,53 +1681,55 @@ export function CalendarPage() {
               )}
             </div>
             <Button
-              variant="outline" size="sm"
+              variant="outline"
+              size="sm"
               onClick={() => setShowFilters(s => !s)}
-              className={cn(showFilters && 'bg-primary/5 border-primary/30 text-primary')}
+              className={cn('h-9 gap-1.5 text-xs font-medium', showFilters && 'bg-primary/10 border-primary/30 text-primary')}
             >
               <SlidersHorizontal className="size-3.5" />
-              Filters
+              <span>Filters</span>
               {activeFiltersCount > 0 && (
-                <span className="ml-1 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                <span className="flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                   {activeFiltersCount}
                 </span>
               )}
             </Button>
-            <Button variant="ghost" size="icon-sm" onClick={() => void load()} title="Refresh">
+            <Button variant="ghost" size="icon-sm" onClick={() => void load()} title="Refresh" className="h-9 w-9">
               <RefreshCw className="size-4" />
             </Button>
           </div>
+
           {showFilters && (
-            <div className="flex flex-wrap gap-2 rounded-xl border border-border/60 bg-card/80 p-3">
+            <div className="flex flex-wrap items-center gap-2.5 border-t border-border/60 pt-3">
               {[
                 { label: 'Type', value: filterType, setter: setFilterType, options: ['', 'EVENT', 'TASK', 'REMINDER'] },
                 { label: 'Priority', value: filterPriority, setter: setFilterPriority, options: ['', 'HIGH', 'MEDIUM', 'LOW'] },
                 { label: 'Status', value: filterStatus, setter: setFilterStatus, options: ['', 'PENDING', 'COMPLETED', 'OVERDUE', 'CANCELLED'] },
               ].map(f => (
-                <label key={f.label} className="flex flex-col gap-0.5 text-xs font-medium">
-                  {f.label}
+                <label key={f.label} className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                  <span>{f.label}:</span>
                   <select
                     value={f.value}
                     onChange={e => f.setter(e.target.value)}
-                    className="h-8 rounded-lg border border-input bg-background px-2 text-xs"
+                    className="h-8 rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-none transition-colors focus:border-ring"
                   >
                     {f.options.map(o => <option key={o} value={o}>{o || `All ${f.label}s`}</option>)}
                   </select>
                 </label>
               ))}
-              <label className="flex flex-col gap-0.5 text-xs font-medium">
-                Category
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                <span>Category:</span>
                 <input
                   value={filterCategory}
                   onChange={e => setFilterCategory(e.target.value)}
                   placeholder="e.g. work"
-                  className="h-8 rounded-lg border border-input bg-background px-2 text-xs"
+                  className="h-8 w-28 rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-none transition-colors focus:border-ring"
                 />
               </label>
               {activeFiltersCount > 0 && (
                 <button
                   onClick={() => { setFilterType(''); setFilterPriority(''); setFilterStatus(''); setFilterCategory('') }}
-                  className="self-end text-xs text-muted-foreground hover:text-destructive flex items-center gap-1"
+                  className="ml-auto text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors"
                 >
                   <X className="size-3" /> Clear filters
                 </button>
@@ -1494,6 +1737,7 @@ export function CalendarPage() {
             </div>
           )}
         </div>
+
 
         {/* New item form */}
         {showNewForm && (
@@ -1551,8 +1795,8 @@ export function CalendarPage() {
                               className={cn(
                                 'group flex items-center gap-3 rounded-xl border border-border/60 bg-card/90 px-4 py-3 text-left transition-all hover:border-primary/30 hover:shadow-sm',
                                 selectedItem?.id === item.id && 'border-primary/40 bg-primary/[0.03] shadow-sm',
-                                isOverdue(item) && 'border-red-300/40 bg-red-500/[0.02]',
-                                isInProgress(item) && 'border-blue-300/40 bg-blue-500/[0.02]'
+                                isOverdue(item, now) && 'border-red-300/40 bg-red-500/[0.02]',
+                                isInProgress(item, now) && 'border-blue-300/40 bg-blue-500/[0.02]'
                               )}
                             >
                               {/* Quick complete / status toggle */}
@@ -1584,6 +1828,13 @@ export function CalendarPage() {
                               </div>
 
                               <div className="flex shrink-0 flex-col items-end gap-1">
+                                {/* Time remaining countdown */}
+                                <TimeRemaining
+                                  dueAt={item.endAt ?? item.startAt}
+                                  status={item.status}
+                                  allDay={item.allDay}
+                                  variant="inline"
+                                />
                                 <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-medium',
                                   item.priority === 'HIGH' ? 'bg-red-500/10 text-red-600 dark:text-red-400' : item.priority === 'MEDIUM' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-muted text-muted-foreground'
                                 )}>{item.priority}</span>
@@ -1639,8 +1890,8 @@ export function CalendarPage() {
                         className={cn(
                           'flex items-start gap-3 rounded-xl border border-border/60 bg-card/90 p-4 text-left transition-all hover:border-primary/30',
                           selectedItem?.id === item.id && 'border-primary/40 bg-primary/[0.03]',
-                          isOverdue(item) && 'border-red-300/40 bg-red-500/[0.02]',
-                          isInProgress(item) && 'border-blue-300/40 bg-blue-500/[0.02]'
+                          isOverdue(item, now) && 'border-red-300/40 bg-red-500/[0.02]',
+                          isInProgress(item, now) && 'border-blue-300/40 bg-blue-500/[0.02]'
                         )}
                       >
                         <button
@@ -1672,7 +1923,14 @@ export function CalendarPage() {
                           <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium', STATUS_META[item.status]?.color)}>
                             {STATUS_META[item.status]?.label}
                           </span>
-                          {isInProgress(item) && (
+                          {/* Time remaining for day-view items */}
+                          <TimeRemaining
+                            dueAt={item.endAt ?? item.startAt}
+                            status={item.status}
+                            allDay={item.allDay}
+                            variant="inline"
+                          />
+                          {isInProgress(item, now) && (
                             <span className="text-[10px] font-medium text-blue-500 flex items-center gap-1">
                               <span className="size-1.5 rounded-full bg-blue-500 animate-ping" />
                               Active now

@@ -29,6 +29,7 @@ import {
 } from '@/lib/api'
 import { toast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
+import { TimeRemaining } from '@/components/ui/time-remaining'
 
 function formatTime(isoString: string): string {
   try {
@@ -207,10 +208,10 @@ export function DashboardView({
       {/* Top Header */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/90">
             Workspace Overview · {new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
-          <h1 className="mt-0.5 text-2xl font-bold tracking-tight">Today’s Command Center</h1>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Today’s Command Center</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -218,12 +219,12 @@ export function DashboardView({
             size="sm"
             onClick={() => loadSummary(true)}
             disabled={refreshing}
-            className="gap-1.5 text-xs"
+            className="gap-1.5 text-xs shadow-2xs"
           >
             <RefreshCw className={cn('size-3.5', refreshing && 'animate-spin')} />
             Refresh
           </Button>
-          <Button size="sm" onClick={() => onNavigate?.('/calendar')} className="gap-1.5 text-xs">
+          <Button size="sm" onClick={() => onNavigate?.('/calendar')} className="gap-1.5 text-xs shadow-xs">
             <Plus className="size-3.5" />
             Add Schedule
           </Button>
@@ -233,75 +234,81 @@ export function DashboardView({
       {/* Metrics Row */}
       <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         {/* Card 1: Today's Progress */}
-        <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-xs hover:border-primary/30 transition-all duration-200">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">Today’s Progress</span>
-            <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+            <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
               {metrics.completedToday}/{metrics.totalToday} done
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight">{progressPercent}%</span>
+            <span className="text-2xl font-bold tracking-tight text-foreground">{progressPercent}%</span>
             <span className="text-xs text-muted-foreground">completed</span>
           </div>
-          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
+          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
             <div
-              className="h-full rounded-full bg-primary transition-all duration-500"
+              className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
         </div>
 
         {/* Card 2: Upcoming Entries */}
-        <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-xs hover:border-primary/30 transition-all duration-200">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Upcoming (Next 7 Days)</span>
-            <CalendarDays className="size-4 text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground">Upcoming (7 Days)</span>
+            <div className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <CalendarDays className="size-3.5" />
+            </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight">{metrics.upcomingCount}</span>
-            <span className="text-xs text-muted-foreground">scheduled entries</span>
+            <span className="text-2xl font-bold tracking-tight text-foreground">{metrics.upcomingCount}</span>
+            <span className="text-xs text-muted-foreground">scheduled items</span>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="mt-2.5 text-[11px] text-muted-foreground">
             {metrics.recurringCount} recurring schedule{metrics.recurringCount === 1 ? '' : 's'} active
           </p>
         </div>
 
         {/* Card 3: Overdue Alert Card */}
         <div className={cn(
-          'rounded-2xl border p-4 shadow-sm transition-colors',
+          'rounded-2xl border p-4 shadow-xs transition-all duration-200',
           metrics.overdueCount > 0
-            ? 'border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10'
-            : 'border-border/80 bg-card'
+            ? 'border-amber-500/40 bg-amber-500/5 dark:bg-amber-500/10'
+            : 'border-border/80 bg-card hover:border-primary/30'
         )}>
           <div className="flex items-center justify-between">
-            <span className={cn('text-xs font-medium', metrics.overdueCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>
+            <span className={cn('text-xs font-medium', metrics.overdueCount > 0 ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-muted-foreground')}>
               Overdue Items
             </span>
-            <AlertTriangle className={cn('size-4', metrics.overdueCount > 0 ? 'text-amber-500' : 'text-muted-foreground')} />
+            <div className={cn('flex size-6 items-center justify-center rounded-md', metrics.overdueCount > 0 ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted text-muted-foreground')}>
+              <AlertTriangle className="size-3.5" />
+            </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className={cn('text-2xl font-bold tracking-tight', metrics.overdueCount > 0 && 'text-amber-600 dark:text-amber-400')}>
+            <span className={cn('text-2xl font-bold tracking-tight', metrics.overdueCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground')}>
               {metrics.overdueCount}
             </span>
-            <span className="text-xs text-muted-foreground">require attention</span>
+            <span className="text-xs text-muted-foreground">{metrics.overdueCount > 0 ? 'require attention' : 'on track'}</span>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            {metrics.overdueCount > 0 ? 'Review and reschedule missed items' : 'All schedule items on track!'}
+          <p className="mt-2.5 text-[11px] text-muted-foreground">
+            {metrics.overdueCount > 0 ? 'Review and reschedule missed items' : 'All schedule items are on schedule'}
           </p>
         </div>
 
         {/* Card 4: Quick Links & Alerts */}
-        <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-xs hover:border-primary/30 transition-all duration-200">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">Workspace Status</span>
-            <Bell className="size-4 text-muted-foreground" />
+            <div className="flex size-6 items-center justify-center rounded-md bg-muted text-muted-foreground">
+              <Bell className="size-3.5" />
+            </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight">{metrics.unreadNotifications}</span>
-            <span className="text-xs text-muted-foreground">unread notifications</span>
+            <span className="text-2xl font-bold tracking-tight text-foreground">{metrics.unreadNotifications}</span>
+            <span className="text-xs text-muted-foreground">unread updates</span>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="mt-2.5 text-[11px] text-muted-foreground">
             {metrics.activeReminders} active alert reminder{metrics.activeReminders === 1 ? '' : 's'}
           </p>
         </div>
@@ -309,15 +316,17 @@ export function DashboardView({
 
       {/* Overdue Items Banner if present */}
       {overdueItems.length > 0 && (
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 dark:bg-amber-500/10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <AlertTriangle className="size-5 text-amber-500 shrink-0" />
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4.5 dark:bg-amber-500/10">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0">
+                <AlertTriangle className="size-4" />
+              </div>
               <div>
-                <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                <h3 className="text-xs font-semibold text-amber-900 dark:text-amber-200">
                   You have {overdueItems.length} overdue schedule item{overdueItems.length === 1 ? '' : 's'}
                 </h3>
-                <p className="text-xs text-amber-700/90 dark:text-amber-300/80">
+                <p className="text-[11px] text-amber-700/90 dark:text-amber-300/80 mt-0.5">
                   Mark them as complete or open the calendar to reschedule them.
                 </p>
               </div>
@@ -326,24 +335,29 @@ export function DashboardView({
               variant="outline"
               size="sm"
               onClick={() => onNavigate?.('/calendar')}
-              className="border-amber-500/30 text-xs text-amber-700 hover:bg-amber-500/10 dark:text-amber-300"
+              className="border-amber-500/40 text-xs text-amber-700 hover:bg-amber-500/10 dark:text-amber-300 shadow-2xs self-start sm:self-center"
             >
               Open Calendar
             </Button>
           </div>
-          <div className="mt-3 divide-y divide-amber-500/10 rounded-xl bg-background/50 p-2">
+          <div className="mt-3 divide-y divide-amber-500/15 rounded-xl border border-amber-500/20 bg-background/70 p-2">
             {overdueItems.slice(0, 3).map(item => (
               <div key={item.id} className="flex items-center justify-between py-2 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground">{item.title}</span>
-                  <span className="text-muted-foreground">({formatDate(item.startAt)})</span>
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <span className="truncate font-medium text-foreground">{item.title}</span>
+                  <TimeRemaining
+                    dueAt={item.endAt ?? item.startAt}
+                    status={item.status}
+                    allDay={item.allDay}
+                    variant="inline"
+                  />
                 </div>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="xs"
                   onClick={() => handleToggleStatus(item)}
                   disabled={updatingId === item.id}
-                  className="h-6 gap-1 px-2 text-[11px]"
+                  className="ml-2 h-6 shrink-0 gap-1 px-2 text-[10px]"
                 >
                   <CheckCircle2 className="size-3" />
                   Mark done
@@ -357,11 +371,11 @@ export function DashboardView({
       {/* Main Content Grid: Today's Schedule + Activity Feed */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left 2 Cols: Today's Activities */}
-        <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-sm lg:col-span-2">
-          <div className="flex items-center justify-between border-b border-border pb-4">
+        <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-xs lg:col-span-2">
+          <div className="flex items-center justify-between border-b border-border/70 pb-3.5">
             <div>
-              <h2 className="font-semibold text-base">Today’s Schedule</h2>
-              <p className="text-xs text-muted-foreground">
+              <h2 className="font-semibold text-sm text-foreground">Today’s Schedule</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {todayItems.length} item{todayItems.length === 1 ? '' : 's'} scheduled for today
               </p>
             </div>
@@ -369,25 +383,27 @@ export function DashboardView({
               variant="ghost"
               size="sm"
               onClick={() => onNavigate?.('/calendar')}
-              className="gap-1 text-xs text-primary"
+              className="gap-1 text-xs text-primary hover:text-primary"
             >
               View full calendar
               <ArrowRight className="size-3.5" />
             </Button>
           </div>
 
-          <div className="mt-4 divide-y divide-border/60">
+          <div className="mt-3 divide-y divide-border/60">
             {todayItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Calendar className="size-10 text-muted-foreground/40 mb-3" />
-                <h3 className="text-sm font-semibold">Clear calendar for today!</h3>
+              <div className="flex flex-col items-center justify-center py-14 text-center">
+                <div className="flex size-12 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground/60 mb-3">
+                  <Calendar className="size-5" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">Clear calendar for today!</h3>
                 <p className="mt-1 max-w-sm text-xs text-muted-foreground">
                   No events or tasks are scheduled for today. Take time to relax or add a new schedule item.
                 </p>
                 <Button
                   size="sm"
                   onClick={() => onNavigate?.('/calendar')}
-                  className="mt-4 gap-1.5 text-xs"
+                  className="mt-4 gap-1.5 text-xs shadow-xs"
                 >
                   <Plus className="size-3.5" />
                   Add item for today
@@ -400,21 +416,21 @@ export function DashboardView({
                   <div
                     key={item.id}
                     className={cn(
-                      'flex items-center justify-between py-3 transition-opacity',
+                      'group flex items-center justify-between py-3 transition-all duration-150',
                       isCompleted && 'opacity-60'
                     )}
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
                       <button
                         type="button"
                         onClick={() => handleToggleStatus(item)}
                         disabled={updatingId === item.id}
                         aria-label={isCompleted ? 'Mark incomplete' : 'Mark complete'}
                         className={cn(
-                          'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors',
+                          'mt-0.5 flex size-4.5 shrink-0 items-center justify-center rounded-md border transition-all duration-150',
                           isCompleted
                             ? 'border-emerald-500 bg-emerald-500 text-white'
-                            : 'border-muted-foreground/30 hover:border-primary'
+                            : 'border-border/90 hover:border-primary bg-background'
                         )}
                       >
                         {updatingId === item.id ? (
@@ -424,34 +440,40 @@ export function DashboardView({
                         ) : null}
                       </button>
 
-                      <div className="space-y-0.5">
-                        <p className={cn('text-sm font-medium', isCompleted && 'line-through text-muted-foreground')}>
+                      <div className="space-y-1 min-w-0 flex-1 pr-2">
+                        <p className={cn('text-xs font-medium leading-normal text-foreground truncate', isCompleted && 'line-through text-muted-foreground')}>
                           {item.title}
                         </p>
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Clock className="size-3" />
                             {item.allDay ? 'All Day' : formatTime(item.startAt)}
                             {item.endAt && !item.allDay ? ` – ${formatTime(item.endAt)}` : ''}
                           </span>
                           {item.category && (
-                            <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider">
+                            <span className="rounded bg-secondary px-1.5 py-0.2 text-[9px] font-medium uppercase tracking-wider text-secondary-foreground">
                               {item.category}
                             </span>
                           )}
                           {item.recurrenceRule && (
-                            <span className="flex items-center gap-0.5 text-[11px] text-primary">
+                            <span className="flex items-center gap-0.5 text-[10px] text-primary">
                               <Repeat className="size-3" />
                               {item.recurrenceRule.frequency}
                             </span>
                           )}
+                          <TimeRemaining
+                            dueAt={item.endAt ?? item.startAt}
+                            status={item.status}
+                            allDay={item.allDay}
+                            variant="inline"
+                          />
                         </div>
                       </div>
                     </div>
 
                     <span
                       className={cn(
-                        'rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
+                        'rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider shrink-0',
                         item.priority === 'HIGH' && 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
                         item.priority === 'MEDIUM' && 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
                         item.priority === 'LOW' && 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
@@ -469,17 +491,19 @@ export function DashboardView({
         {/* Right Col: Recent Activity & AI Summary */}
         <div className="flex flex-col gap-6">
           {/* AI Import Draft Status Box */}
-          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 shadow-xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sparkles className="size-4 text-primary" />
-                <h3 className="text-sm font-semibold">AI Schedule Importer</h3>
+                <div className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <Sparkles className="size-3.5" />
+                </div>
+                <h3 className="text-xs font-semibold text-foreground">AI Schedule Importer</h3>
               </div>
               <Button
                 variant="ghost"
-                size="sm"
+                size="xs"
                 onClick={() => onNavigate?.('/ai-import')}
-                className="h-7 text-xs text-primary gap-1 px-2"
+                className="h-6 text-xs text-primary gap-1 px-1.5 hover:bg-primary/10"
               >
                 Import
                 <ExternalLink className="size-3" />
@@ -488,11 +512,11 @@ export function DashboardView({
             {recentAiDrafts.length > 0 ? (
               <div className="mt-3 space-y-2">
                 {recentAiDrafts.slice(0, 2).map(draft => (
-                  <div key={draft.id} className="rounded-xl border border-border/60 bg-background/80 p-2.5 text-xs">
+                  <div key={draft.id} className="rounded-xl border border-border/60 bg-background/80 p-2.5 text-xs shadow-2xs">
                     <div className="flex items-center justify-between font-medium">
-                      <span className="truncate max-w-[160px]">{draft.originalFileName || 'Schedule Draft'}</span>
+                      <span className="truncate max-w-[150px]">{draft.originalFileName || 'Schedule Draft'}</span>
                       <span className={cn(
-                        'rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase',
+                        'rounded px-1.5 py-0.2 text-[9px] font-semibold uppercase',
                         draft.status === 'CONFIRMED' && 'bg-emerald-500/10 text-emerald-600',
                         draft.status === 'REVIEW' && 'bg-amber-500/10 text-amber-600',
                         draft.status === 'FAILED' && 'bg-destructive/10 text-destructive',
@@ -501,51 +525,51 @@ export function DashboardView({
                         {draft.status}
                       </span>
                     </div>
-                    <p className="mt-1 text-[11px] text-muted-foreground">
+                    <p className="mt-1 text-[10px] text-muted-foreground">
                       {draft.itemCount} items · {formatRelativeTime(draft.createdAt)}
                     </p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
                 Drop your syllabus, shift plan, or calendar text to instantly generate schedule items.
               </p>
             )}
           </div>
 
           {/* Recent Activity Timeline */}
-          <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-sm">
-            <h3 className="font-semibold text-sm">Recent Activity</h3>
-            <p className="text-xs text-muted-foreground">Live activity across your workspace</p>
+          <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-xs">
+            <h3 className="font-semibold text-sm text-foreground">Recent Activity</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Live workspace activity updates</p>
 
             <div className="mt-4 space-y-3.5">
               {recentActivity.length === 0 ? (
-                <p className="py-4 text-center text-xs text-muted-foreground">No recent activity yet.</p>
+                <p className="py-6 text-center text-xs text-muted-foreground">No recent activity yet.</p>
               ) : (
                 recentActivity.map(act => (
                   <div key={act.id} className="flex items-start gap-2.5 text-xs">
                     <div className={cn(
-                      'mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full',
+                      'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full',
                       act.type === 'ITEM_COMPLETED' && 'bg-emerald-500/10 text-emerald-600',
                       act.type === 'DRAFT_CONFIRMED' && 'bg-primary/10 text-primary',
                       act.type === 'NOTIFICATION' && 'bg-amber-500/10 text-amber-600',
                       act.type === 'ITEM_UPDATED' && 'bg-muted text-muted-foreground'
                     )}>
                       {act.type === 'ITEM_COMPLETED' ? (
-                        <CheckCircle2 className="size-3.5" />
+                        <CheckCircle2 className="size-3" />
                       ) : act.type === 'DRAFT_CONFIRMED' ? (
-                        <Sparkles className="size-3.5" />
+                        <Sparkles className="size-3" />
                       ) : act.type === 'NOTIFICATION' ? (
-                        <Bell className="size-3.5" />
+                        <Bell className="size-3" />
                       ) : (
-                        <Clock className="size-3.5" />
+                        <Clock className="size-3" />
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-foreground">{act.title}</p>
+                      <p className="truncate font-medium text-foreground text-xs">{act.title}</p>
                       {act.description && (
-                        <p className="truncate text-[11px] text-muted-foreground">{act.description}</p>
+                        <p className="truncate text-[10px] text-muted-foreground">{act.description}</p>
                       )}
                     </div>
                     <span className="shrink-0 text-[10px] text-muted-foreground">

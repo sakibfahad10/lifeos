@@ -751,69 +751,73 @@ export function AIImportPage({ onNavigate }: { onNavigate?: (path: string) => vo
   return (
     <div className="flex flex-col gap-6">
       {/* Page header */}
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10">
-              <Sparkles className="size-5 text-primary" />
-            </div>
-            <h1 className="text-2xl font-semibold tracking-tight">AI Schedule Import</h1>
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span>Workspace</span>
+            <span>/</span>
+            <span className="text-primary font-bold">AI Import</span>
           </div>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Upload a schedule, review what LifeOS understood, and add only approved items to your calendar.
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">AI Schedule Import</h1>
+          <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+            Extract structured calendar items and tasks from documents, images, or raw text with human-in-the-loop review.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 shrink-0">
           <DraftStatusBadge status={status} />
           {status !== 'idle' && status !== 'processing' && status !== 'uploading' && (
-            <Button size="sm" variant="ghost" onClick={reset} title="Start over">
-              <X />
+            <Button size="sm" variant="outline" onClick={reset} title="Start over" className="h-8 gap-1.5 text-xs font-medium">
+              <RefreshCw className="size-3" />
+              <span>Reset</span>
             </Button>
           )}
         </div>
       </header>
 
       {/* Safety notice */}
-      <div className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card px-4 py-2.5">
-        <Zap className="size-4 shrink-0 text-primary" />
-        <p className="text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">AI suggestions never save automatically.</span>{' '}
-          You review and confirm every item before it touches your calendar.
+      <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/[0.03] px-4 py-2.5 text-xs shadow-xs">
+        <div className="flex size-6 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
+          <Zap className="size-3.5" />
+        </div>
+        <p className="text-muted-foreground leading-relaxed">
+          <span className="font-semibold text-foreground">Safe AI Workflow:</span>{' '}
+          Extracted items are staged in a draft. Nothing is committed to your calendar or task list until you review and confirm each entry.
         </p>
       </div>
 
       {/* Error banner */}
       {error && (
-        <div role="alert" className="lifeos-enter flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/10 p-4">
+        <div role="alert" className="lifeos-enter flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 shadow-xs">
           <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-destructive">Something went wrong</p>
-            <p className="mt-0.5 text-xs text-destructive/80">{error}</p>
+            <p className="text-sm font-semibold text-destructive">Extraction Alert</p>
+            <p className="mt-0.5 text-xs text-destructive/90">{error}</p>
           </div>
-          <Button size="icon-sm" variant="ghost" className="text-destructive" onClick={() => setError('')}>
-            <X />
+          <Button size="icon-sm" variant="ghost" className="text-destructive hover:bg-destructive/15" onClick={() => setError('')}>
+            <X className="size-4" />
           </Button>
         </div>
       )}
 
       {/* Main content grid */}
-      <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
+      <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
 
         {/* ── Left: Upload card ── */}
         <div className="flex flex-col gap-4">
-          <div className="rounded-2xl border border-border/60 bg-card p-5">
-            <h2 className="flex items-center gap-2 font-semibold">
+          <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-xs">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <FileUp className="size-4 text-primary" />
-              Source &amp; instructions
+              <span>Document or Text Source</span>
             </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">Upload a file or paste raw schedule text below</p>
 
             {/* Drop zone */}
             <div
               className={cn(
-                'mt-4 flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-5 text-center transition-all duration-200',
+                'mt-4 flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center transition-all duration-200',
                 dragOver
-                  ? 'border-primary bg-primary/5 scale-[1.01]'
-                  : 'border-border/80 hover:border-primary/50 hover:bg-muted/40',
+                  ? 'border-primary bg-primary/10 scale-[1.01]'
+                  : 'border-border/80 hover:border-primary/50 hover:bg-muted/30',
               )}
               onDragOver={e => { e.preventDefault(); setDragOver(true) }}
               onDragLeave={() => setDragOver(false)}
@@ -824,28 +828,37 @@ export function AIImportPage({ onNavigate }: { onNavigate?: (path: string) => vo
             >
               {selectedFile ? (
                 <div className="flex flex-col items-center gap-2">
-                  {fileIcon(selectedFile.type)}
-                  <p className="max-w-[200px] truncate text-sm font-medium">{selectedFile.name}</p>
-                  <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024).toFixed(0)} KB</p>
+                  <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    {fileIcon(selectedFile.type)}
+                  </div>
+                  <p className="max-w-[220px] truncate text-sm font-semibold text-foreground">{selectedFile.name}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{(selectedFile.size / 1024).toFixed(0)} KB</p>
                   <button
                     type="button"
-                    className="mt-1 text-xs text-muted-foreground underline hover:text-foreground"
+                    className="mt-1 rounded-md px-2 py-0.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors"
                     onClick={e => {
                       e.stopPropagation()
                       setSelectedFile(null)
                       if (fileRef.current) fileRef.current.value = ''
                     }}
                   >
-                    Remove
+                    Remove file
                   </button>
                 </div>
               ) : (
                 <>
-                  <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10">
-                    <FileUp className="size-6 text-primary" />
+                  <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-xs">
+                    <FileUp className="size-6" />
                   </div>
-                  <p className="mt-3 text-sm font-medium">Drop a file or click to browse</p>
-                  <p className="mt-1 text-xs text-muted-foreground">PDF, PNG, JPG, DOC, DOCX, TXT</p>
+                  <p className="mt-3 text-sm font-semibold text-foreground">Drop your schedule or click to browse</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Supports syllabi, agendas, timetable images, and calendars</p>
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
+                    {['PDF', 'PNG', 'JPG', 'DOCX', 'TXT'].map(ext => (
+                      <span key={ext} className="rounded-md border border-border/70 bg-muted/60 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        {ext}
+                      </span>
+                    ))}
+                  </div>
                 </>
               )}
             </div>
