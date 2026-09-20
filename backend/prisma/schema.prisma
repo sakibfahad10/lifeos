@@ -43,6 +43,27 @@ enum NotificationType {
   AI_IMPORT
 }
 
+enum AlertSeverity {
+  NORMAL
+  IMPORTANT
+  CRITICAL
+}
+
+enum AlertTriggerType {
+  OFFSET_BEFORE
+  EXACT_TIME
+}
+
+enum DeliveryStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  SKIPPED_QUIET_HOURS
+  SNOOZED
+  DISMISSED
+}
+
 enum AiImportStatus {
   PROCESSING
   REVIEW
@@ -62,6 +83,7 @@ model User {
   calendarItems   CalendarItem[]
   notifications   Notification[]
   reminders       Reminder[]
+  alerts          Alert[]
   aiImportDrafts  AiImportDraft[]
   attachments     Attachment[]
   auditLogs       AuditLog[]
@@ -89,6 +111,7 @@ model CalendarItem {
   recurrenceRule  RecurrenceRule?
   notifications   Notification[]
   reminders       Reminder[]
+  alerts          Alert[]
   attachments     Attachment[]
 
   @@index([userId])
@@ -124,22 +147,85 @@ model Reminder {
   @@index([calendarItemId])
 }
 
+model Alert {
+  id               String           @id @default(uuid()) @db.Uuid
+  userId           String           @db.Uuid
+  calendarItemId   String?          @db.Uuid
+  title            String?
+  triggerType      AlertTriggerType @default(OFFSET_BEFORE)
+  offsetMinutes    Int?             @default(15)
+  exactTime        DateTime?
+  channels         String[]         @default(["IN_APP", "BROWSER"])
+  severity         AlertSeverity    @default(NORMAL)
+  soundName        String?          @default("REMINDER")
+  soundVolume      Int              @default(80)
+  soundRepeat      Int              @default(1)
+  enabled          Boolean          @default(true)
+  order            Int              @default(0)
+  escalationStep   Int?
+  lastTriggeredAt  DateTime?
+  snoozedUntil     DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calendarItem     CalendarItem?    @relation(fields: [calendarItemId], references: [id], onDelete: Cascade)
+  deliveries       AlertDelivery[]
+  notifications    Notification[]
+
+  @@index([userId])
+  @@index([calendarItemId])
+  @@index([enabled])
+}
+
+model AlertDelivery {
+  id           String         @id @default(uuid()) @db.Uuid
+  alertId      String         @db.Uuid
+  userId       String         @db.Uuid
+  channel      String
+  status       DeliveryStatus @default(PENDING)
+  scheduledFor DateTime
+  sentAt       DateTime?
+  error        String?
+  retryCount   Int            @default(0)
+  payload      Json?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  alert        Alert          @relation(fields: [alertId], references: [id], onDelete: Cascade)
+
+  @@index([alertId])
+  @@index([userId])
+  @@index([status])
+  @@index([scheduledFor])
+}
+
 model Notification {
   id             String           @id @default(uuid()) @db.Uuid
   userId         String           @db.Uuid
   calendarItemId String?          @db.Uuid
   type           NotificationType
+  severity       AlertSeverity    @default(NORMAL)
   title          String
   message        String
+  channels       String[]         @default(["IN_APP"])
+  soundName      String?
+  soundVolume    Int?             @default(80)
+  soundRepeat    Int?             @default(1)
+  snoozedUntil   DateTime?
+  status         DeliveryStatus   @default(SENT)
+  alertId        String?          @db.Uuid
+  metadata       Json?
   scheduledAt    DateTime?
   readAt         DateTime?
   createdAt      DateTime         @default(now())
   user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   calendarItem   CalendarItem?    @relation(fields: [calendarItemId], references: [id], onDelete: SetNull)
+  alert          Alert?           @relation(fields: [alertId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([scheduledAt])
   @@index([readAt])
+  @@index([status])
+  @@index([severity])
 }
 
 model AiImportDraft {
