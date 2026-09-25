@@ -288,3 +288,56 @@
   color: oklch(.68 .2 25);
   background-color: oklch(.28 .09 25 / 0.4);
 }
+
+/* ─── Scrollbar polish ────────────────────────────────────────────────────────
+   Thin, on-brand scrollbars on webkit browsers
+   ──────────────────────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.82 0.012 250);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.72 0.02 255);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: oklch(1 0 0 / 18%);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: oklch(1 0 0 / 28%);
+}
+
+/* ─── Text selection ──────────────────────────────────────────────────────────*/
+
+::selection {
+  background-color: oklch(0.50 0.16 260 / 20%);
+  color: oklch(0.18 0.02 260);
+}
+.dark ::selection {
+  background-color: oklch(0.65 0.16 260 / 25%);
+  color: oklch(0.97 0.005 250);
+}
+
+/* ─── Shimmer animation for skeletons ────────────────────────────────────────*/
+
+@keyframes lifeos-shimmer {
+  from { background-position: -200% center; }
+  to   { background-position:  200% center; }
+}
+.lifeos-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--muted) 25%,
+    color-mix(in oklab, var(--muted) 60%, var(--background)) 50%,
+    var(--muted) 75%
+  );
+  background-size: 200% auto;
+  animation: lifeos-shimmer 1.6s linear infinite;
+}
