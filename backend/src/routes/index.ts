@@ -6,12 +6,14 @@ import { notificationsRouter } from './notifications.js'
 import { authRouter } from './auth.js'
 import { usersRouter } from './users.js'
 import { dashboardRouter } from './dashboard.js'
+import { alertsRouter } from './alerts.js'
 
 export const apiRouter = Router()
 apiRouter.use('/auth', authRouter)
 apiRouter.use('/dashboard', dashboardRouter)
 apiRouter.use('/calendar', calendarRouter)
 apiRouter.use('/tasks', tasksRouter)
+apiRouter.use('/alerts', alertsRouter)
 apiRouter.use('/ai', aiRouter)
 apiRouter.use('/notifications', notificationsRouter)
 apiRouter.use('/users', usersRouter)
