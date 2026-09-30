@@ -57,6 +57,7 @@ export async function listTasks(req: Request, res: Response, next: NextFunction)
         orderBy: [{ [orderField]: orderDirection }, { id: 'asc' }],
         take,
         skip,
+        include: { alerts: { orderBy: { order: 'asc' as const } }, reminders: { orderBy: { offsetMinutes: 'asc' as const } } },
       }),
       prisma.calendarItem.count({ where }),
     ])
@@ -77,6 +78,7 @@ export async function getTask(req: Request, res: Response, next: NextFunction) {
     const taskId = String(req.params.id)
     const task = await prisma.calendarItem.findFirst({
       where: { id: taskId, userId: id, type: CalendarItemType.TASK },
+      include: { alerts: { orderBy: { order: 'asc' as const } }, reminders: { orderBy: { offsetMinutes: 'asc' as const } } },
     })
     if (!task) return sendError(res, 'NOT_FOUND', 'Task not found.', 404)
     return sendData(res, task)
@@ -100,7 +102,27 @@ export async function createTask(req: Request, res: Response, next: NextFunction
         category: typeof category === 'string' && category.trim() ? category.trim().toLowerCase() : undefined,
         description: typeof description === 'string' ? description.trim() : undefined,
         estimatedMinutes: Number.isInteger(estimatedMinutes) && estimatedMinutes > 0 && estimatedMinutes <= 1440 ? estimatedMinutes : undefined,
+        ...(Array.isArray(req.body?.alerts) && req.body.alerts.length > 0 ? {
+          alerts: {
+            create: req.body.alerts.map((a: any, idx: number) => ({
+              userId: id,
+              title: typeof a.title === 'string' ? a.title : null,
+              triggerType: a.triggerType === 'EXACT_TIME' ? 'EXACT_TIME' : 'OFFSET_BEFORE',
+              offsetMinutes: Number.isInteger(a.offsetMinutes) ? a.offsetMinutes : 15,
+              exactTime: a.exactTime ? new Date(a.exactTime) : null,
+              channels: Array.isArray(a.channels) ? a.channels : ['IN_APP'],
+              severity: a.severity || 'NORMAL',
+              soundName: a.soundName || 'REMINDER',
+              soundVolume: a.soundVolume ?? 80,
+              soundRepeat: a.soundRepeat ?? 1,
+              enabled: a.enabled ?? true,
+              order: a.order ?? idx,
+              escalationStep: a.escalationStep ?? null,
+            })),
+          },
+        } : {}),
       },
+      include: { alerts: { orderBy: { order: 'asc' as const } }, reminders: { orderBy: { offsetMinutes: 'asc' as const } } },
     })
     return sendData(res, task, 201)
   } catch (error) { return next(error) }
@@ -127,9 +149,34 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
     if (typeof description === 'string') updateData.description = description.trim() || null
     if (Number.isInteger(estimatedMinutes) && estimatedMinutes > 0) updateData.estimatedMinutes = estimatedMinutes
 
+    if (Array.isArray(req.body?.alerts)) {
+      await prisma.alert.deleteMany({ where: { calendarItemId: existing.id, userId: id } })
+      if (req.body.alerts.length > 0) {
+        await prisma.alert.createMany({
+          data: req.body.alerts.map((a: any, idx: number) => ({
+            userId: id,
+            calendarItemId: existing.id,
+            title: typeof a.title === 'string' ? a.title : null,
+            triggerType: a.triggerType === 'EXACT_TIME' ? 'EXACT_TIME' : 'OFFSET_BEFORE',
+            offsetMinutes: Number.isInteger(a.offsetMinutes) ? a.offsetMinutes : 15,
+            exactTime: a.exactTime ? new Date(a.exactTime) : null,
+            channels: Array.isArray(a.channels) ? a.channels : ['IN_APP'],
+            severity: a.severity || 'NORMAL',
+            soundName: a.soundName || 'REMINDER',
+            soundVolume: a.soundVolume ?? 80,
+            soundRepeat: a.soundRepeat ?? 1,
+            enabled: a.enabled ?? true,
+            order: a.order ?? idx,
+            escalationStep: a.escalationStep ?? null,
+          })),
+        })
+      }
+    }
+
     const updated = await prisma.calendarItem.update({
       where: { id: existing.id },
       data: updateData,
+      include: { alerts: { orderBy: { order: 'asc' as const } }, reminders: { orderBy: { offsetMinutes: 'asc' as const } } },
     })
     return sendData(res, updated)
   } catch (error) { return next(error) }

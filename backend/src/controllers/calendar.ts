@@ -20,6 +20,7 @@ function parseDate(value: unknown) {
 const itemInclude = {
   recurrenceRule: true,
   reminders: { orderBy: { offsetMinutes: 'asc' as const } },
+  alerts: { orderBy: { order: 'asc' as const } },
 }
 
 export async function listCalendarItems(req: Request, res: Response, next: NextFunction) {
@@ -101,6 +102,25 @@ export async function createCalendarItem(req: Request, res: Response, next: Next
         location: typeof location === 'string' ? location.trim() : undefined,
         allDay: Boolean(allDay),
         estimatedMinutes: Number.isInteger(estimatedMinutes) && estimatedMinutes > 0 && estimatedMinutes <= 1440 ? estimatedMinutes : undefined,
+        ...(Array.isArray(req.body?.alerts) && req.body.alerts.length > 0 ? {
+          alerts: {
+            create: req.body.alerts.map((a: any, idx: number) => ({
+              userId: id,
+              title: typeof a.title === 'string' ? a.title : null,
+              triggerType: a.triggerType === 'EXACT_TIME' ? 'EXACT_TIME' : 'OFFSET_BEFORE',
+              offsetMinutes: Number.isInteger(a.offsetMinutes) ? a.offsetMinutes : 15,
+              exactTime: a.exactTime ? new Date(a.exactTime) : null,
+              channels: Array.isArray(a.channels) ? a.channels : ['IN_APP'],
+              severity: a.severity || 'NORMAL',
+              soundName: a.soundName || 'REMINDER',
+              soundVolume: a.soundVolume ?? 80,
+              soundRepeat: a.soundRepeat ?? 1,
+              enabled: a.enabled ?? true,
+              order: a.order ?? idx,
+              escalationStep: a.escalationStep ?? null,
+            })),
+          },
+        } : {}),
       },
       include: itemInclude,
     })
@@ -121,6 +141,31 @@ export async function updateCalendarItem(req: Request, res: Response, next: Next
     const effectiveEnd = parsedEnd !== undefined ? parsedEnd : existing.endAt
     if (effectiveEnd && effectiveEnd <= effectiveStart)
       return sendError(res, 'VALIDATION_ERROR', 'endAt must be after startAt.', 400)
+
+    if (Array.isArray(body.alerts)) {
+      await prisma.alert.deleteMany({ where: { calendarItemId: existing.id, userId: id } })
+      if (body.alerts.length > 0) {
+        await prisma.alert.createMany({
+          data: body.alerts.map((a: any, idx: number) => ({
+            userId: id,
+            calendarItemId: existing.id,
+            title: typeof a.title === 'string' ? a.title : null,
+            triggerType: a.triggerType === 'EXACT_TIME' ? 'EXACT_TIME' : 'OFFSET_BEFORE',
+            offsetMinutes: Number.isInteger(a.offsetMinutes) ? a.offsetMinutes : 15,
+            exactTime: a.exactTime ? new Date(a.exactTime) : null,
+            channels: Array.isArray(a.channels) ? a.channels : ['IN_APP'],
+            severity: a.severity || 'NORMAL',
+            soundName: a.soundName || 'REMINDER',
+            soundVolume: a.soundVolume ?? 80,
+            soundRepeat: a.soundRepeat ?? 1,
+            enabled: a.enabled ?? true,
+            order: a.order ?? idx,
+            escalationStep: a.escalationStep ?? null,
+          })),
+        })
+      }
+    }
+
     const item = await prisma.calendarItem.update({
       where: { id: existing.id },
       data: {
@@ -163,9 +208,12 @@ export async function duplicateCalendarItem(req: Request, res: Response, next: N
   try {
     const id = userId(req)
     if (!id) return sendError(res, 'AUTH_REQUIRED', 'Provide x-user-id for development API access.', 401)
-    const source = await prisma.calendarItem.findFirst({ where: { id: routeId(req), userId: id }, include: { recurrenceRule: true, reminders: true } })
+    const source = await prisma.calendarItem.findFirst({
+      where: { id: routeId(req), userId: id },
+      include: { recurrenceRule: true, reminders: true, alerts: true },
+    })
     if (!source) return sendError(res, 'NOT_FOUND', 'Calendar item not found.', 404)
-    const { id: _id, createdAt: _ca, updatedAt: _ua, recurrenceRule, reminders, ...rest } = source
+    const { id: _id, createdAt: _ca, updatedAt: _ua, recurrenceRule, reminders, alerts, ...rest } = source
     const copy = await prisma.calendarItem.create({
       data: {
         ...rest,
@@ -187,6 +235,25 @@ export async function duplicateCalendarItem(req: Request, res: Response, next: N
         ...(reminders.length ? {
           reminders: {
             create: reminders.map(r => ({ userId: id, offsetMinutes: r.offsetMinutes, enabled: r.enabled })),
+          },
+        } : {}),
+        ...(alerts?.length ? {
+          alerts: {
+            create: alerts.map(a => ({
+              userId: id,
+              title: a.title,
+              triggerType: a.triggerType,
+              offsetMinutes: a.offsetMinutes,
+              exactTime: a.exactTime,
+              channels: a.channels,
+              severity: a.severity,
+              soundName: a.soundName,
+              soundVolume: a.soundVolume,
+              soundRepeat: a.soundRepeat,
+              enabled: a.enabled,
+              order: a.order,
+              escalationStep: a.escalationStep,
+            })),
           },
         } : {}),
       },
