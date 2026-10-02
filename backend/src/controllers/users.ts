@@ -13,8 +13,24 @@ const settingsSchema = z.object({
   theme: z.enum(['light', 'dark', 'system']).optional(),
   weekStartsOn: z.enum(['sunday', 'monday']).optional(),
   timezone: z.string().trim().min(1).max(80).optional(),
-  notifications: z.object({ reminders: z.boolean().optional(), overdue: z.boolean().optional(), aiImports: z.boolean().optional() }).partial().optional(),
-}).partial()
+  density: z.enum(['normal', 'compact']).optional(),
+  notifications: z.object({
+    reminders: z.boolean().optional(),
+    overdue: z.boolean().optional(),
+    aiImports: z.boolean().optional(),
+    dailyDigest: z.boolean().optional(),
+  }).partial().optional(),
+  calendarDefaults: z.object({
+    defaultView: z.enum(['month', 'week', 'day', 'agenda']).optional(),
+    defaultReminderMinutes: z.number().optional(),
+    defaultEventDuration: z.number().optional(),
+  }).partial().optional(),
+  aiDefaults: z.object({
+    autoSelectHighConfidence: z.boolean().optional(),
+    defaultItemType: z.enum(['EVENT', 'TASK']).optional(),
+    defaultCategory: z.string().optional(),
+  }).partial().optional(),
+}).passthrough()
 
 function userId(req: AuthenticatedRequest) { return req.userId ?? '' }
 
@@ -55,7 +71,22 @@ export async function updateSettings(req: AuthenticatedRequest, res: Response) {
   const current = await prisma.user.findUnique({ where: { id: userId(req) }, select: { settings: true } })
   if (!current) return sendError(res, 'USER_NOT_FOUND', 'User was not found', 404)
   const previous = typeof current.settings === 'object' && current.settings !== null ? current.settings as Record<string, unknown> : {}
-  const next = { ...previous, ...parsed.data, notifications: { ...(typeof previous.notifications === 'object' && previous.notifications !== null ? previous.notifications : {}), ...(parsed.data.notifications ?? {}) } }
+  const next = {
+    ...previous,
+    ...parsed.data,
+    notifications: {
+      ...(typeof previous.notifications === 'object' && previous.notifications !== null ? previous.notifications : {}),
+      ...(parsed.data.notifications ?? {})
+    },
+    calendarDefaults: {
+      ...(typeof previous.calendarDefaults === 'object' && previous.calendarDefaults !== null ? previous.calendarDefaults : {}),
+      ...(parsed.data.calendarDefaults ?? {})
+    },
+    aiDefaults: {
+      ...(typeof previous.aiDefaults === 'object' && previous.aiDefaults !== null ? previous.aiDefaults : {}),
+      ...(parsed.data.aiDefaults ?? {})
+    },
+  }
   const user = await prisma.user.update({ where: { id: userId(req) }, data: { settings: next }, select: { settings: true } })
   return sendData(res, user.settings)
 }
