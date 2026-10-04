@@ -83,6 +83,23 @@ export type RecurrenceRule = {
   startDate: string; endDate?: string; timezone: string
 }
 
+export type AlertSeverity = 'NORMAL' | 'IMPORTANT' | 'CRITICAL'
+export type AlertTriggerType = 'OFFSET_BEFORE' | 'EXACT_TIME'
+export type AlertChannel = 'IN_APP' | 'BROWSER' | 'SOUND' | 'EMAIL'
+export type SoundName = 'SILENT' | 'SOFT' | 'REMINDER' | 'URGENT' | 'CRITICAL'
+
+export type AlertItem = {
+  id: string; userId: string; calendarItemId?: string | null
+  title?: string | null; triggerType: AlertTriggerType
+  offsetMinutes?: number | null; exactTime?: string | null
+  channels: AlertChannel[]; severity: AlertSeverity
+  soundName?: string | null; soundVolume: number; soundRepeat: number
+  enabled: boolean; order: number; escalationStep?: number | null
+  lastTriggeredAt?: string | null; snoozedUntil?: string | null
+  createdAt: string; updatedAt: string
+  calendarItem?: { id: string; title: string; startAt: string; type: string; status: string } | null
+}
+
 export type CalendarItem = {
   id: string; userId: string; title: string; description?: string
   type: 'TASK' | 'EVENT' | 'REMINDER'; status: 'PENDING' | 'COMPLETED' | 'CANCELLED' | 'OVERDUE'
@@ -91,13 +108,23 @@ export type CalendarItem = {
   createdAt: string; updatedAt: string
   recurrenceRule?: RecurrenceRule | null
   reminders?: ReminderItem[]
+  alerts?: AlertItem[]
 }
 
 export type SmartProposal = { title: string; startAt: string; endAt: string; estimatedMinutes: number; priority: 'LOW' | 'MEDIUM' | 'HIGH'; type: 'TASK' | 'EVENT' }
 export type SmartSchedule = { parsed: { title: string; startAt?: string; estimatedMinutes: number; priority: 'LOW' | 'MEDIUM' | 'HIGH' }; conflicts: Array<{ id: string; title: string; startAt: string; endAt?: string }>; alternatives: SmartProposal[]; created: CalendarItem[] }
 export type CalendarBriefing = { summary: string; events: CalendarItem[]; highPriority: CalendarItem[]; conflictItemIds: string[] }
 export type CalendarAnalytics = { studyMinutes: number; workMinutes: number; meetingMinutes: number; completedTasks: number; totalTasks: number; freeMinutes: number }
-export type NotificationItem = { id: string; userId: string; type: 'REMINDER' | 'OVERDUE' | 'MISSED' | 'SYSTEM' | 'AI_IMPORT'; title: string; message: string; readAt?: string | null; createdAt: string; scheduledAt?: string | null; calendarItemId?: string | null }
+export type NotificationItem = {
+  id: string; userId: string; type: 'REMINDER' | 'OVERDUE' | 'MISSED' | 'SYSTEM' | 'AI_IMPORT'
+  severity: AlertSeverity; title: string; message: string
+  channels: AlertChannel[]; soundName?: string | null; soundVolume?: number | null; soundRepeat?: number | null
+  snoozedUntil?: string | null; status: string; alertId?: string | null
+  metadata?: Record<string, unknown> | null
+  readAt?: string | null; createdAt: string; scheduledAt?: string | null; calendarItemId?: string | null
+  calendarItem?: { id: string; title: string; type: string; startAt: string; status: string; priority: string } | null
+  alert?: { id: string; severity: AlertSeverity; soundName?: string | null; channels: AlertChannel[] } | null
+}
 
 // ─── Dashboard Summary ────────────────────────────────────────────────────────
 
@@ -268,3 +295,35 @@ export function markNotificationRead(id: string) { return request<{ read: boolea
 export function markNotificationUnread(id: string) { return request<{ unread: boolean }>(`/notifications/${id}/unread`, { method: 'PATCH' }) }
 export function markAllNotificationsRead() { return request<{ done: boolean }>('/notifications/read-all', { method: 'POST' }) }
 export function deleteNotification(id: string) { return request<{ deleted: boolean }>(`/notifications/${id}`, { method: 'DELETE' }) }
+export function snoozeNotification(id: string, minutes: number) { return request<{ success: boolean; snoozedUntil: string }>(`/notifications/${id}/snooze`, { method: 'POST', body: JSON.stringify({ minutes }) }) }
+export function dismissNotification(id: string) { return request<{ success: boolean }>(`/notifications/${id}/dismiss`, { method: 'POST' }) }
+export function getNotificationSummary() { return request<{ unreadCount: number; today: NotificationItem[]; missed: NotificationItem[]; upcoming: NotificationItem[]; recent: NotificationItem[] }>('/notifications/summary') }
+export function sendDailyDigest() { return request<{ success: boolean; messageId?: string }>('/notifications/digest', { method: 'POST' }) }
+
+// ─── Alerts ────────────────────────────────────────────────────────────────────
+
+export type AlertInput = {
+  calendarItemId?: string | null; title?: string
+  triggerType?: 'OFFSET_BEFORE' | 'EXACT_TIME'
+  offsetMinutes?: number; exactTime?: string | null
+  channels?: string[]; severity?: string
+  soundName?: string; soundVolume?: number; soundRepeat?: number
+  enabled?: boolean; order?: number; escalationStep?: number | null
+}
+
+export function listAlerts(calendarItemId?: string) {
+  const q = calendarItemId ? `?calendarItemId=${calendarItemId}` : ''
+  return request<AlertItem[]>(`/alerts${q}`)
+}
+
+export function getAlert(id: string) { return request<AlertItem>(`/alerts/${id}`) }
+export function createAlert(payload: AlertInput) { return request<AlertItem>('/alerts', { method: 'POST', body: JSON.stringify(payload) }) }
+export function updateAlert(id: string, payload: Partial<AlertInput>) { return request<AlertItem>(`/alerts/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }) }
+export function deleteAlert(id: string) { return request<{ deleted: boolean }>(`/alerts/${id}`, { method: 'DELETE' }) }
+export function applyAlertPreset(calendarItemId: string, preset: 'BIRTHDAY' | 'DEADLINE' | 'MEETING' | 'ESCALATION') {
+  return request<AlertItem[]>('/alerts/preset', { method: 'POST', body: JSON.stringify({ calendarItemId, preset }) })
+}
+export function testAlertDelivery(channel: string, soundName?: string, severity?: string) {
+  return request<{ success: boolean; notification?: NotificationItem }>('/alerts/test-delivery', { method: 'POST', body: JSON.stringify({ channel, soundName, severity }) })
+}
+
