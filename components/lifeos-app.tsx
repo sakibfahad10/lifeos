@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertCircle, Bell, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, ClipboardCheck, FileUp, LayoutDashboard, ListChecks, Loader2, LogOut, Menu, Moon, MoreHorizontal, Plus, RotateCcw, Search, Settings, Sparkles, Sun, UserRound, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { getTasks, createTask, updateTaskStatus, getCalendarItems, createCalendarItem, getNotifications, markNotificationRead, getNotificationCount, getCalendarAnalytics, getCalendarBriefing, rescheduleMissedTask, smartSchedule, type CalendarAnalytics, type CalendarBriefing, type TaskItem, type CalendarItem as ApiCalendarItem, type NotificationItem, type SmartSchedule } from '@/lib/api'
+import { getTasks, createTask, updateTaskStatus, getCalendarItems, createCalendarItem, getNotifications, markNotificationRead, getCalendarAnalytics, getCalendarBriefing, rescheduleMissedTask, smartSchedule, type CalendarAnalytics, type CalendarBriefing, type TaskItem, type CalendarItem as ApiCalendarItem, type NotificationItem, type SmartSchedule } from '@/lib/api'
 import { getCurrentUser, getSettings, updateProfile, updateSettings, logout, type LifeOSUser } from '@/lib/user-api'
 import { cn } from '@/lib/utils'
 import { AIImportPage } from '@/components/ai-import-page'
@@ -12,6 +12,9 @@ import { NotificationsPage } from '@/components/notifications-page'
 import { TasksPage } from '@/components/tasks-page'
 import { DashboardView } from '@/components/dashboard-view'
 import { AuthForm } from '@/components/auth-form'
+import { SettingsPage } from '@/components/settings-page'
+import { NotificationBell } from '@/components/notification-center'
+import { applyTheme, initTheme, toggleThemeMode } from '@/lib/theme'
 
 const nav = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -444,12 +447,6 @@ function Topbar({ user, onMenu, onLogout, onOpenQuickAdd, onNavigate }: {
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    getNotificationCount()
-      .then(res => setUnreadCount(res.count))
-      .catch(() => undefined)
-  }, [])
-
-  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setUserDropdownOpen(false)
@@ -491,8 +488,7 @@ function Topbar({ user, onMenu, onLogout, onOpenQuickAdd, onNavigate }: {
   }
 
   const toggleTheme = () => {
-    const isDark = document.documentElement.classList.toggle('dark')
-    localStorage.setItem('lifeos-theme', isDark ? 'dark' : 'light')
+    toggleThemeMode()
   }
 
   const todayFormatted = new Date().toLocaleDateString('en-US', {
@@ -582,21 +578,8 @@ function Topbar({ user, onMenu, onLogout, onOpenQuickAdd, onNavigate }: {
           <Moon className="absolute size-3.5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
         </Button>
 
-        {/* Notifications Icon */}
-        <a
-          href="/notifications"
-          onClick={e => handleNavClick(e, '/notifications')}
-          className="relative flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          aria-label="Notifications"
-          title="Notifications"
-        >
-          <Bell className="size-3.5" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-        </a>
+        {/* Notifications Bell */}
+        <NotificationBell />
 
         {/* Interactive User Avatar & Dropdown */}
         <div className="relative ml-1 border-l border-border/80 pl-2.5" ref={dropdownRef}>
@@ -828,141 +811,6 @@ function ProfilePage({ user, onUpdateUser, onLogout, onNavigate }: { user: LifeO
   </SimplePage>
 }
 
-function SettingsPage({ onUpdateUser, onNavigate, onLogout }: { onUpdateUser?: (u: LifeOSUser) => void; onNavigate?: (href: string) => void; onLogout?: () => void }) {
-  const [user, setUser] = useState<LifeOSUser | null>(null)
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [theme, setTheme] = useState('system')
-  const [weekStartsOn, setWeekStartsOn] = useState('monday')
-  const [status, setStatus] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    void Promise.all([getCurrentUser(), getSettings()]).then(([profile, settings]) => {
-      setUser(profile.data)
-      setName(profile.data.name)
-      setEmail(profile.data.email)
-      setTheme(String(settings.data.theme ?? 'system'))
-      setWeekStartsOn(String(settings.data.weekStartsOn ?? 'monday'))
-    }).catch(() => setStatus('Unable to load your settings.'))
-  }, [])
-
-  const save = async () => {
-    setSaving(true)
-    setStatus('')
-    try {
-      const updatedUser = await updateProfile({ name, email })
-      await updateSettings({ theme, weekStartsOn })
-      setUser(updatedUser.data)
-      if (onUpdateUser) onUpdateUser(updatedUser.data)
-      setStatus('Changes saved.')
-    } catch {
-      setStatus('Could not save changes.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <SimplePage title="Settings" eyebrow="Workspace Preferences">
-      <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
-        <nav className="flex gap-1 overflow-x-auto lg:flex-col">
-          <a
-            href="/profile"
-            onClick={e => {
-              if (!e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && e.button === 0 && onNavigate) {
-                e.preventDefault()
-                onNavigate('/profile')
-              }
-            }}
-            className="whitespace-nowrap rounded-lg px-3 py-2 text-left text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
-          >
-            Profile
-          </a>
-          <button className="whitespace-nowrap rounded-lg bg-primary/10 px-3 py-2 text-left text-xs font-semibold text-primary">
-            Preferences
-          </button>
-          {['Appearance', 'Notifications', 'Calendar', 'AI Import'].map(x => (
-            <button key={x} disabled className="whitespace-nowrap rounded-lg px-3 py-2 text-left text-xs text-muted-foreground/60">
-              {x}
-            </button>
-          ))}
-        </nav>
-        <div className="flex flex-col gap-6">
-          <div className="rounded-2xl border border-border/80 bg-card p-6 shadow-xs">
-            <h2 className="font-semibold text-base">Preferences</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">Update your personal details and workspace preferences.</p>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <label className="flex flex-col gap-1.5 text-xs font-medium">
-                Name
-                <input
-                  value={name}
-                  onChange={event => setName(event.target.value)}
-                  className="h-9 rounded-lg border border-input bg-background px-3 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-xs font-medium sm:col-span-2">
-                Email address
-                <input
-                  type="email"
-                  value={email}
-                  onChange={event => setEmail(event.target.value)}
-                  className="h-9 rounded-lg border border-input bg-background px-3 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-xs font-medium">
-                Theme
-                <select
-                  value={theme}
-                  onChange={event => setTheme(event.target.value)}
-                  className="h-9 rounded-lg border border-input bg-background px-3 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
-                >
-                  <option value="system">System Default</option>
-                  <option value="light">Light Mode</option>
-                  <option value="dark">Dark Mode</option>
-                </select>
-              </label>
-              <label className="flex flex-col gap-1.5 text-xs font-medium">
-                Week starts on
-                <select
-                  value={weekStartsOn}
-                  onChange={event => setWeekStartsOn(event.target.value)}
-                  className="h-9 rounded-lg border border-input bg-background px-3 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
-                >
-                  <option value="monday">Monday</option>
-                  <option value="sunday">Sunday</option>
-                </select>
-              </label>
-            </div>
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              <Button onClick={() => void save()} disabled={saving || !user}>
-                {saving ? 'Saving…' : 'Save changes'}
-              </Button>
-              {status && <p role="status" className="text-xs font-medium text-primary">{status}</p>}
-            </div>
-          </div>
-
-          {onLogout && (
-            <div className="rounded-2xl border border-destructive/25 bg-destructive/5 p-5">
-              <h3 className="font-semibold text-sm text-destructive">Account Session</h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">Sign out of your active session on this device.</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4 border-destructive/30 text-destructive hover:bg-destructive/10"
-                onClick={onLogout}
-              >
-                <LogOut className="mr-1.5 size-3.5" />
-                Sign out
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-    </SimplePage>
-  )
-}
-
 export function LifeOSApp({ path = '/dashboard' }: { path?: string }) {
   const [currentPath, setCurrentPath] = useState(path)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -1010,10 +858,21 @@ export function LifeOSApp({ path = '/dashboard' }: { path?: string }) {
   }, [])
 
   useEffect(() => {
+    const cleanup = initTheme()
+    return cleanup
+  }, [])
+
+  useEffect(() => {
     void getCurrentUser()
       .then(res => {
         setUser(res.data)
         setAuthChecked(true)
+        if (res.data?.settings && typeof res.data.settings === 'object') {
+          const userTheme = (res.data.settings as Record<string, unknown>).theme
+          if (userTheme === 'light' || userTheme === 'dark' || userTheme === 'system') {
+            applyTheme(userTheme)
+          }
+        }
       })
       .catch(() => {
         window.location.href = '/login'
@@ -1070,14 +929,41 @@ export function LifeOSApp({ path = '/dashboard' }: { path?: string }) {
 
 export function AuthPage({ register = false }: { register?: boolean }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-border/80 bg-card p-8 shadow-sm">
-        <Brand />
-        <div className="mt-8">
-          <h1 className="text-xl font-bold tracking-tight text-foreground">{register ? 'Create your account' : 'Welcome back'}</h1>
-          <p className="mt-1 text-xs text-muted-foreground">{register ? 'Start organizing the life you want.' : 'Sign in to continue to your workspace.'}</p>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
+      {/* Decorative background gradient blobs */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -left-40 size-[600px] rounded-full bg-primary/8 blur-[100px]" />
+        <div className="absolute -bottom-40 -right-40 size-[500px] rounded-full bg-primary/6 blur-[80px]" />
+      </div>
+
+      <div className="relative w-full max-w-md">
+        {/* Glass card */}
+        <div className="rounded-3xl border border-border/80 bg-card/95 p-8 shadow-[0_32px_64px_-24px_oklch(0_0_0_/_25%)] backdrop-blur-xl">
+          <Brand />
+          <div className="mt-8">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              {register ? 'Create your account' : 'Welcome back'}
+            </h1>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {register ? 'Start organizing the life you want.' : 'Sign in to continue to your workspace.'}
+            </p>
+          </div>
+          <AuthForm register={register} />
         </div>
-        <AuthForm register={register} />
+
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          {register ? (
+            <>
+              Already have an account?{' '}
+              <a href="/login" className="font-medium text-primary hover:underline">Sign in</a>
+            </>
+          ) : (
+            <>
+              New to LifeOS?{' '}
+              <a href="/register" className="font-medium text-primary hover:underline">Create an account</a>
+            </>
+          )}
+        </p>
       </div>
     </main>
   )
