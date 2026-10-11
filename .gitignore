@@ -9,11 +9,14 @@ dist/
 *.tsbuildinfo
 
 # Environment
-# NOTE: `.env` and `backend/.env` are still tracked from before this file
-# existed. They are intentionally left alone here so the ignore rules match
-# reality — see README for the outstanding secret-rotation task.
+# Real .env files must never be committed. Copy .env.example to .env and
+# fill in your own credentials. Note: the keys that were previously
+# committed here before this rule existed are still in git history and on
+# the remote — they need to be rotated, not just ignored.
+.env
 .env.local
 .env.*.local
+!.env.example
 
 # Logs
 *.log
