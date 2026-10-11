@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useNow } from '@/lib/hooks/use-time'
 import { TimeRemaining } from '@/components/ui/time-remaining'
+import { AlertSection } from '@/components/alert-section'
 
 // ─── Constants & Styles ────────────────────────────────────────────────────────
 
@@ -866,6 +867,11 @@ function ItemPanel({ item, onClose, onUpdated, onDeleted }: {
               itemId={localItem.id}
               reminders={localItem.reminders || []}
               onUpdate={() => void refreshLocal()}
+            />
+            <AlertSection
+              calendarItemId={localItem.id}
+              initialAlerts={localItem.alerts || []}
+              onAlertsChange={() => void refreshLocal()}
             />
           </div>
         )}
